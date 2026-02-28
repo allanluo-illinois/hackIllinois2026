@@ -48,11 +48,11 @@ anchor_dict = {
     "right_center_rear_tire_right": cv2.imread("images/frame_0105.jpg"), #right
     "front_tire_right": cv2.imread("images/frame_0131.jpg"), #frontright
 }
-anchor_paths = ['images/frame_0018.jpg', 'images/frame_0033.jpg', 'images/frame_0047.jpg', 'images/frame_0068.jpg', 'images/frame_0081.jpg', 'images/frame_0095.jpg', 'images/frame_0105.jpg', 'images/frame_0131.jpg']
+anchor_paths = ['anchors/frame_0018.jpg', 'anchors/frame_0033.jpg', 'anchors/frame_0047.jpg', 'anchors/frame_0068.jpg', 'anchors/frame_0081.jpg', 'anchors/frame_0095.jpg', 'anchors/frame_0105.jpg', 'anchors/frame_0131.jpg']
 # Create the dictionary
 anchors = {path: cv2.imread(path) for path in anchor_paths}
 
-query = cv2.imread('images/testimage.jpg')
+query = cv2.imread('test_images/testimage1.jpeg')
 pos, score = find_best_anchor(query, anchor_dict)
 with open('components.json', 'r') as f:
     anchor_data = json.load(f)
