@@ -1,0 +1,117 @@
+{
+  "machine_model": "950-982_wheel_loader",
+  "zones": [
+    {
+      "zone_id": "front_slight_sides",
+      "inspection_points": [
+        { "id": "bucket_cutting_edge", "component": "bucket_cutting_edge" },
+        { "id": "moldboard", "component": "moldboard" },
+        { "id": "tilt_cylinders", "component": "tilt_cylinders" },
+        { "id": "windshield", "component": "windshield" },
+        { "id": "windshield_wipers", "component": "windshield_wipers" },
+        { "id": "arms_left", "component": "arms", "side": "left" },
+        { "id": "arms_right", "component": "arms", "side": "right" },
+        { "id": "hoses_left", "component": "hoses", "side": "left" },
+        { "id": "hoses_right", "component": "hoses", "side": "right" },
+        { "id": "frame_left", "component": "frame", "side": "left" },
+        { "id": "frame_right", "component": "frame", "side": "right" },
+        { "id": "lights_left", "component": "lights", "side": "left" },
+        { "id": "lights_right", "component": "lights", "side": "right" },
+        { "id": "lift_cylinders_left", "component": "lift_cylinders", "side": "left" },
+        { "id": "lift_cylinders_right", "component": "lift_cylinders", "side": "right" }
+      ]
+    },
+    {
+      "zone_id": "front_tire_left",
+      "inspection_points": [
+        { "id": "front_left_tire", "component": "tire" },
+        { "id": "front_left_wheel", "component": "wheel" },
+        { "id": "front_left_step_caps", "component": "step_caps" },
+        { "id": "front_left_lug_nuts", "component": "lug_nuts" },
+        { "id": "front_left_final_drive", "component": "final_drive" },
+        { "id": "front_left_duo_cone_seal", "component": "duo_cone_seal" },
+        { "id": "front_left_brakes", "component": "brakes" },
+        { "id": "front_left_differential_oil", "component": "differential_oil" }
+      ]
+    },
+    {
+      "zone_id": "front_tire_right",
+      "inspection_points": [
+        { "id": "front_right_tire", "component": "tire" },
+        { "id": "front_right_wheel", "component": "wheel" },
+        { "id": "front_right_step_caps", "component": "step_caps" },
+        { "id": "front_right_lug_nuts", "component": "lug_nuts" },
+        { "id": "front_right_final_drive", "component": "final_drive" },
+        { "id": "front_right_duo_cone_seal", "component": "duo_cone_seal" }
+      ]
+    },
+    {
+      "zone_id": "left_center_rear_tire_left_service_panel",
+      "inspection_points": [
+        { "id": "transmission_transfer_case", "component": "transmission_transfer_case" },
+        { "id": "rops_left", "component": "rops", "side": "left" },
+        { "id": "rear_left_tire", "component": "tire" },
+        { "id": "rear_left_wheel", "component": "wheel" },
+        { "id": "rear_left_step_caps", "component": "step_caps" },
+        { "id": "rear_left_lug_nuts", "component": "lug_nuts" },
+        { "id": "rear_left_final_drive", "component": "final_drive" },
+        { "id": "rear_left_duo_cone_seal", "component": "duo_cone_seal" },
+        { "id": "rear_left_hoses", "component": "hoses" },
+        { "id": "rear_left_brakes", "component": "brakes" },
+        { "id": "rear_left_differential_oil", "component": "differential_oil" },
+        { "id": "fuel_tank", "component": "fuel_tank" },
+        { "id": "air_tank", "component": "air_tank" },
+        { "id": "hydraulic_tank", "component": "hydraulic_tank" },
+        { "id": "battery_case", "component": "battery_case" },
+        { "id": "def_tank", "component": "def_tank" },
+        { "id": "coolant_level", "component": "coolant" },
+        { "id": "engine_oil_level", "component": "engine_oil" },
+        { "id": "fuel_filters", "component": "fuel_filters" },
+        { "id": "belts", "component": "belts" },
+        { "id": "air_filter", "component": "air_filter" },
+        { "id": "transmission_oil", "component": "transmission_oil" },
+        { "id": "radiator", "component": "radiator" },
+        { "id": "service_compartment_overall", "component": "overall_compartment" }
+      ]
+    },
+    {
+      "zone_id": "rear_of_machine",
+      "inspection_points": [
+        { "id": "rear_lights", "component": "rear_lights" },
+        { "id": "radiator_grille", "component": "radiator_grille" },
+        { "id": "rops_rear", "component": "rops" },
+        { "id": "rear_leaks", "component": "leaks" }
+      ]
+    },
+    {
+      "zone_id": "right_center_rear_tire_right",
+      "inspection_points": [
+        { "id": "rear_right_tire", "component": "tire" },
+        { "id": "rear_right_wheel", "component": "wheel" },
+        { "id": "rear_right_step_caps", "component": "step_caps" },
+        { "id": "rear_right_lug_nuts", "component": "lug_nuts" },
+        { "id": "rear_right_final_drive", "component": "final_drive" },
+        { "id": "rear_right_duo_cone_seal", "component": "duo_cone_seal" },
+        { "id": "rear_right_hoses", "component": "hoses" },
+        { "id": "rear_right_steps", "component": "steps" },
+        { "id": "rear_right_handholds", "component": "handholds" },
+        { "id": "rear_right_marking_lights", "component": "marking_lights" },
+        { "id": "right_door", "component": "door" }
+      ]
+    },
+    {
+      "zone_id": "interior",
+      "inspection_points": [
+        { "id": "fire_extinguisher", "component": "fire_extinguisher" },
+        { "id": "seat", "component": "seat" },
+        { "id": "seatbelt", "component": "seatbelt" },
+        { "id": "horn", "component": "horn" },
+        { "id": "alarm", "component": "alarm" },
+        { "id": "mirrors_interior", "component": "mirrors" },
+        { "id": "cab_air_filter", "component": "cab_air_filter" },
+        { "id": "control_panel", "component": "control_panel" },
+        { "id": "interior_overall", "component": "overall" }
+      ]
+    }
+  ]
+}
