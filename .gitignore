@@ -1,4 +1,3 @@
-
 CLAUDE.md
 components.json
 hotspots.txt
@@ -7,4 +6,3 @@ service-account.json
 *.log
 .env
 .env.*
->>>>>>> be92250 (Stable iOS MVP before live audio implementation)
