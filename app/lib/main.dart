@@ -1,12 +1,13 @@
-// Setup: run `flutter pub get` after adding provider: ^6.1.2 to pubspec.yaml
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_shell.dart';
 import 'core/app_state.dart';
 import 'core/audio_capture.dart';
-import 'core/audio_pipeline.dart';
-import 'core/audio_transport.dart';
+import 'core/backend_port.dart';
+import 'core/http_backend.dart';
 import 'core/mock_backend.dart';
+import 'core/media_service.dart';
+import 'core/tts_service.dart';
 
 // CAT brand colours
 const _catYellow = Color(0xFFFFCD11);
@@ -14,20 +15,30 @@ const _catBlack = Color(0xFF1A1A1A);
 const _catCharcoal = Color(0xFF2C2C2C);
 const _catPaleYellow = Color(0xFFFFF3C4);
 
+// ── Backend config ──────────────────────────────────────────────────────
+// Set to true + provide URL to use the real HTTP backend.
+const _useHttpBackend = false;
+const _backendUrl = 'http://localhost:8080';
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
   // ── Dependency injection ──────────────────────────────────────────────
-  // Swap these for real implementations when integrating:
-  //   backend:  HttpBackend(baseUrl: '...') or WebSocketBackend(...)
-  //   pipeline: AudioPipeline(source: RealAudioSource(), transport: WsAudioTransport(...))
-  final backend = MockBackend();
-  final pipeline = AudioPipeline(
-    source: AvFoundationAudioSource(),
-    transport: MockAudioTransport(),
-  );
+  final BackendPort backend = _useHttpBackend
+      ? HttpBackend(baseUrl: _backendUrl)
+      : MockBackend();
+  final recorder = AvFoundationRecorder();
+  final mediaService = MediaService(); // useGalleryFallback: true for simulator
+  final ttsService = TtsService();
 
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState(backend: backend, pipeline: pipeline),
+      create: (_) => AppState(
+        backend: backend,
+        recorder: recorder,
+        mediaService: mediaService,
+        tts: ttsService,
+      ),
       child: const CatInspectorApp(),
     ),
   );
@@ -63,7 +74,6 @@ class CatInspectorApp extends StatelessWidget {
         colorScheme: base,
         useMaterial3: true,
 
-        // AppBar: black band, white text, yellow accents
         appBarTheme: const AppBarTheme(
           backgroundColor: _catBlack,
           foregroundColor: Colors.white,
@@ -79,7 +89,6 @@ class CatInspectorApp extends StatelessWidget {
           actionsIconTheme: IconThemeData(color: Colors.white),
         ),
 
-        // Bottom nav: white bg, yellow indicator, black selected icon
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: Colors.white,
           indicatorColor: _catYellow,
@@ -89,7 +98,6 @@ class CatInspectorApp extends StatelessWidget {
           ),
         ),
 
-        // Cards: crisp white, subtle shadow
         cardTheme: CardThemeData(
           color: Colors.white,
           elevation: 1.5,
@@ -99,7 +107,6 @@ class CatInspectorApp extends StatelessWidget {
           margin: EdgeInsets.zero,
         ),
 
-        // Filled buttons: yellow + bold black text
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             foregroundColor: _catBlack,
@@ -110,7 +117,6 @@ class CatInspectorApp extends StatelessWidget {
           ),
         ),
 
-        // Outlined buttons: black border
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: _catBlack,
@@ -121,14 +127,12 @@ class CatInspectorApp extends StatelessWidget {
           ),
         ),
 
-        // Chips
         chipTheme: ChipThemeData(
           labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8)),
         ),
 
-        // Inputs: rounded pill-friendly border
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8)),

@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'backend_port.dart';
 import 'models.dart';
@@ -8,8 +6,6 @@ import 'models.dart';
 class MockBackend implements BackendPort {
   final _rng = Random();
   int _turnCount = 0;
-  StreamController<AgentMessage>? _videoStreamController;
-  Timer? _videoTimer;
 
   // ── Session lifecycle ───────────────────────────────────────────────────
 
@@ -27,9 +23,7 @@ class MockBackend implements BackendPort {
   }
 
   @override
-  Future<void> endSession(String sessionId) async {
-    await disconnectVideoStream(sessionId);
-  }
+  Future<void> endSession(String sessionId) async {}
 
   // ── Inspect ─────────────────────────────────────────────────────────────
 
@@ -78,22 +72,27 @@ class MockBackend implements BackendPort {
     required String sessionId,
     required String zoneId,
     String? text,
-    Uint8List? audioBytes,
-    Uint8List? imageBytes,
-    String? mimeType,
+    String? audioFilePath,
+    String? imageFilePath,
+    String? videoFilePath,
   }) async {
+    // Simulate backend processing time.
     await Future.delayed(const Duration(milliseconds: 700));
 
     final idx = _turnCount % _agentLines.length;
     final zoneIdx = _turnCount ~/ 2 % _zones.length;
     _turnCount++;
 
-    // Determine modality-specific response prefix
     String prefix = '';
-    if (audioBytes != null) {
+    String? transcript;
+    if (audioFilePath != null) {
       prefix = '[Transcribed] ';
-    } else if (imageBytes != null) {
+      transcript =
+          'Bucket teeth condition looks normal, no visible wear or damage detected.';
+    } else if (imageFilePath != null) {
       prefix = '[Photo analysis] ';
+    } else if (videoFilePath != null) {
+      prefix = '[Video analysis] ';
     }
 
     final addFinding = _rng.nextDouble() > 0.5;
@@ -105,7 +104,7 @@ class MockBackend implements BackendPort {
                   ? FindingSeverity.review
                   : FindingSeverity.ok,
               title: text ?? 'Component check',
-              detail: imageBytes != null
+              detail: imageFilePath != null
                   ? 'Photo shows normal condition.'
                   : (text?.isEmpty ?? true)
                       ? 'No issues noted.'
@@ -123,53 +122,12 @@ class MockBackend implements BackendPort {
     return InspectTurn(
       source: _roles[_rng.nextInt(_roles.length)],
       agentText: '$prefix${_agentLines[idx]}',
+      transcript: transcript,
       suggestedZone: _zones[zoneIdx],
       suggestedInspectionPoint: _steps[_rng.nextInt(_steps.length)],
       newFindings: findings,
       requestedAction: action,
     );
-  }
-
-  // ── Live video stream ───────────────────────────────────────────────────
-
-  static const _visionObservations = [
-    'Live feed: bucket area appears clear.',
-    'Detected possible fluid residue near left cylinder.',
-    'Tire tread within acceptable range.',
-    'No visible damage on service panel hoses.',
-    'Radiator grille clear of debris.',
-  ];
-
-  @override
-  Stream<AgentMessage> connectVideoStream({
-    required String sessionId,
-    required String zoneId,
-  }) {
-    _videoStreamController?.close();
-    _videoTimer?.cancel();
-
-    _videoStreamController = StreamController<AgentMessage>.broadcast();
-    int obsIdx = 0;
-
-    _videoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (_videoStreamController?.isClosed ?? true) return;
-      _videoStreamController!.add(AgentMessage(
-        source: AgentRole.vision,
-        text: _visionObservations[obsIdx % _visionObservations.length],
-        timestamp: DateTime.now(),
-      ));
-      obsIdx++;
-    });
-
-    return _videoStreamController!.stream;
-  }
-
-  @override
-  Future<void> disconnectVideoStream(String sessionId) async {
-    _videoTimer?.cancel();
-    _videoTimer = null;
-    await _videoStreamController?.close();
-    _videoStreamController = null;
   }
 
   // ── Media ───────────────────────────────────────────────────────────────
@@ -178,7 +136,7 @@ class MockBackend implements BackendPort {
   Future<MediaProcessResult> uploadMedia({
     required String sessionId,
     required MediaKind kind,
-    required Uint8List bytes,
+    required String filePath,
     required String mimeType,
     String? zoneId,
   }) async {
@@ -216,6 +174,7 @@ class MockBackend implements BackendPort {
   Future<ReportsQueryResult> queryReports({
     required String machineId,
     required String query,
+    List<ChatMessage> history = const [],
   }) async {
     await Future.delayed(const Duration(milliseconds: 900));
 
@@ -284,8 +243,5 @@ class MockBackend implements BackendPort {
   // ── Cleanup ─────────────────────────────────────────────────────────────
 
   @override
-  void dispose() {
-    _videoTimer?.cancel();
-    _videoStreamController?.close();
-  }
+  void dispose() {}
 }

@@ -1,23 +1,27 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'audio_pipeline.dart';
+import 'audio_capture.dart';
 import 'backend_port.dart';
 import 'media_service.dart';
 import 'models.dart';
+import 'tts_service.dart';
 
 class AppState extends ChangeNotifier {
   final BackendPort backend;
-  final AudioPipeline pipeline;
+  final AudioRecorder recorder;
   final MediaService mediaService;
+  final TtsService tts;
 
   AppState({
     required this.backend,
-    required this.pipeline,
-    MediaService? mediaService,
-  }) : mediaService = mediaService ?? MediaService();
+    required this.recorder,
+    required this.mediaService,
+    required this.tts,
+  }) {
+    tts.onStateChanged = () => notifyListeners();
+  }
 
   // ── Inspection structure (loaded from components.json) ────────────────
 
@@ -71,7 +75,6 @@ class AppState extends ChangeNotifier {
     );
     report.checkedPoints[point.id] = result;
 
-    // Also add as a finding for visibility in the report.
     report.findings.add(Finding(
       id: 'check_${point.id}',
       severity: severity,
@@ -81,8 +84,6 @@ class AppState extends ChangeNotifier {
     ));
 
     _pendingPhotoIds = [];
-
-    // Advance to next unchecked point in the zone.
     _advanceToNextPoint();
     notifyListeners();
   }
@@ -99,7 +100,6 @@ class AppState extends ChangeNotifier {
         return;
       }
     }
-    // All points in zone checked — stay on last.
     currentPointIndex = zone.points.length;
     report.currentStep = 'Zone complete';
   }
@@ -112,7 +112,6 @@ class AppState extends ChangeNotifier {
     currentPointIndex = 0;
     _pendingPhotoIds = [];
 
-    // Skip already-checked points.
     final zone = activeZone;
     if (zone != null) {
       for (var i = 0; i < zone.points.length; i++) {
@@ -144,7 +143,6 @@ class AppState extends ChangeNotifier {
     await _ensureZonesLoaded();
     final result = await backend.createSession(machineId);
 
-    // Use the first zone from components.json.
     final startZone = zones.isNotEmpty ? zones.first.zoneId : result.startingZone;
 
     liveReport = LiveReport(
@@ -155,7 +153,6 @@ class AppState extends ChangeNotifier {
       currentStep: result.startingStep,
     );
 
-    // Set to the first inspection point in the starting zone.
     currentPointIndex = 0;
     _pendingPhotoIds = [];
     final firstPoint = currentPoint;
@@ -169,9 +166,7 @@ class AppState extends ChangeNotifier {
     inspectBusy = false;
     notifyListeners();
 
-    // Auto-start audio recording and live video feed
-    await toggleAudio();
-    await toggleVideo();
+    tts.speak(latestAgentText);
   }
 
   Future<void> sendInspectText(String text) async {
@@ -200,243 +195,103 @@ class AppState extends ChangeNotifier {
       report.currentStep = turn.suggestedInspectionPoint!;
     }
     report.findings.addAll(turn.newFindings);
+    tts.speak(latestAgentText);
   }
 
-  // ── Live feed + voice ──────────────────────────────────────────────────
+  // ── Audio recording (record → upload → response) ─────────────────────
 
-  /// True while the live video feed is streaming to the agent.
-  bool isVideoRecording = false;
-
-  /// True while the microphone is open / inspector is talking.
   bool isAudioRecording = false;
 
-  /// Live partial transcript updated in real time while recording.
-  String liveTranscript = '';
+  Future<void> toggleAudio() async {
+    if (isAudioRecording) {
+      // Stop recording → upload → get response.
+      debugPrint('🎙️ Audio STOP — finalising recording');
+      isAudioRecording = false;
+      notifyListeners();
 
-  /// Live agent guidance updated in real time while recording.
-  String liveAgentText = '';
+      final filePath = await recorder.stop();
+      if (filePath == null) {
+        debugPrint('🎙️ No audio file produced');
+        return;
+      }
 
-  /// Current microphone RMS level in dB (0 = full scale, -160 = silence).
-  double audioLevelDb = -160.0;
+      debugPrint('🎙️ Audio file: $filePath');
+      final report = liveReport;
+      if (report == null) return;
 
-  /// Threshold below which audio is considered too quiet (likely muted/blocked).
-  static const double silenceThresholdDb = -50.0;
+      inspectBusy = true;
+      notifyListeners();
 
-  /// True when mic level is below the silence threshold.
-  bool get isAudioTooQuiet =>
-      isAudioRecording && audioLevelDb < silenceThresholdDb;
+      try {
+        final turn = await backend.sendInspectTurn(
+          sessionId: report.sessionId,
+          zoneId: report.currentZone,
+          audioFilePath: filePath,
+        );
 
-  StreamSubscription? _audioEventSub;
-  StreamSubscription<AgentMessage>? _videoStreamSub;
-  MediaItem? _liveAudioItem;
-  MediaItem? _liveVideoItem;
+        if (turn.transcript != null) {
+          debugPrint('🗣️ Transcript: ${turn.transcript}');
+        }
 
-  /// Opens the device camera to take a photo, then uploads it.
-  Future<void> capturePhoto() async {
-    final path = await mediaService.takePhoto();
-    if (path == null) return; // user cancelled
-    await _captureMediaFromPath(MediaKind.photo, path);
+        _applyTurn(turn, report);
+      } catch (e) {
+        debugPrint('🎙️ Audio upload error: $e');
+        latestAgentText = 'Error processing audio. Please try again.';
+      }
+
+      inspectBusy = false;
+      notifyListeners();
+    } else {
+      // Start recording.
+      debugPrint('🎙️ Audio START');
+      try {
+        await recorder.start();
+        isAudioRecording = true;
+        notifyListeners();
+      } catch (e) {
+        debugPrint('🎙️ Recording start error: $e');
+      }
+    }
   }
 
-  /// Opens the device camera to record a video, then uploads it.
+  // ── Camera preview toggle ─────────────────────────────────────────────
+
+  bool isVideoActive = false;
+
+  void toggleVideo() {
+    isVideoActive = !isVideoActive;
+    debugPrint('📹 Camera preview ${isVideoActive ? "ON" : "OFF"}');
+    notifyListeners();
+  }
+
+  // ── Media capture & upload ────────────────────────────────────────────
+
+  Future<void> capturePhoto() async {
+    final path = await mediaService.takePhoto();
+    if (path == null) return;
+    await _uploadMediaFile(MediaKind.photo, path, 'image/jpeg');
+  }
+
   Future<void> captureVideo() async {
     final path = await mediaService.recordVideo();
     if (path == null) return;
-    await _captureMediaFromPath(MediaKind.video, path);
+    await _uploadMediaFile(MediaKind.video, path, 'video/mp4');
   }
 
-  /// Opens the device gallery to pick an image, then uploads it.
   Future<void> pickImageFromGallery() async {
     final path = await mediaService.pickImageFromGallery();
     if (path == null) return;
-    await _captureMediaFromPath(MediaKind.photo, path);
+    await _uploadMediaFile(MediaKind.photo, path, 'image/jpeg');
   }
 
-  /// Opens the device gallery to pick a video, then uploads it.
   Future<void> pickVideoFromGallery() async {
     final path = await mediaService.pickVideoFromGallery();
     if (path == null) return;
-    await _captureMediaFromPath(MediaKind.video, path);
+    await _uploadMediaFile(MediaKind.video, path, 'video/mp4');
   }
 
-  /// Toggles the live video feed. On start, subscribes to the backend's
-  /// video observation stream. On stop, disconnects.
-  Future<void> toggleVideo() async {
-    final report = liveReport;
-    if (report == null) return;
-
-    if (isVideoRecording) {
-      debugPrint('📹 Video STOP');
-      if (_liveVideoItem != null) {
-        _liveVideoItem!.status = MediaStatus.complete;
-        _liveVideoItem = null;
-      }
-      isVideoRecording = false;
-      notifyListeners();
-      await _videoStreamSub?.cancel();
-      _videoStreamSub = null;
-      await backend.disconnectVideoStream(report.sessionId);
-    } else {
-      debugPrint('📹 Video START | zone=${report.currentZone}');
-      _liveVideoItem = MediaItem(
-        id: 'live_video_${DateTime.now().millisecondsSinceEpoch}',
-        kind: MediaKind.video,
-        status: MediaStatus.streaming,
-        label: 'Live feed – ${report.currentZone}',
-        timestamp: DateTime.now(),
-        localPath: '',
-      );
-      report.media.add(_liveVideoItem!);
-      isVideoRecording = true;
-      notifyListeners();
-      final stream = backend.connectVideoStream(
-        sessionId: report.sessionId,
-        zoneId: report.currentZone,
-      );
-      _videoStreamSub = stream.listen(_onVideoMessage);
-    }
-  }
-
-  void _onVideoMessage(AgentMessage msg) {
-    final report = liveReport;
-    if (report == null) return;
-
-    debugPrint('📹 Vision [${msg.source.name}]: ${msg.text}'
-        '${msg.findings.isNotEmpty ? ' | findings=${msg.findings.length}' : ''}');
-    latestAgentText = msg.text;
-    latestAgentRole = msg.source;
-    if (msg.suggestedZone != null) report.currentZone = msg.suggestedZone!;
-    report.findings.addAll(msg.findings);
-    notifyListeners();
-  }
-
-  /// Toggles the microphone. When the inspector stops talking, the
-  /// accumulated audio is sent to the agent as a voice turn.
-  Future<void> toggleAudio() async {
-    if (isAudioRecording) {
-      debugPrint('🎙️ Audio STOP | total chunks=$_audioChunkCount');
-      _audioChunkCount = 0;
-      if (_liveAudioItem != null) {
-        _liveAudioItem!.status = MediaStatus.complete;
-        _liveAudioItem = null;
-      }
-      await pipeline.stop();
-      isAudioRecording = false;
-      liveTranscript = '';
-      liveAgentText = '';
-      audioLevelDb = -160.0;
-      notifyListeners();
-    } else {
-      final report = liveReport;
-      liveTranscript = '';
-      _audioEventSub?.cancel();
-      _audioEventSub = pipeline.events.listen(_onPipelineEvent);
-      final sessionId = report?.sessionId ?? 'unknown';
-      _liveAudioItem = MediaItem(
-        id: 'live_audio_${DateTime.now().millisecondsSinceEpoch}',
-        kind: MediaKind.audio,
-        status: MediaStatus.streaming,
-        label: 'Audio – ${report?.currentZone ?? 'unknown'}',
-        timestamp: DateTime.now(),
-        localPath: '',
-      );
-      report?.media.add(_liveAudioItem!);
-      await pipeline.start(sessionId);
-      isAudioRecording = true;
-      debugPrint('🎙️ Audio START | session=$sessionId');
-      notifyListeners();
-    }
-  }
-
-  int _audioChunkCount = 0;
-
-  void _onPipelineEvent(BackendEvent event) {
-    switch (event) {
-      case AudioLevel(:final rmsDb):
-        audioLevelDb = rmsDb;
-        _audioChunkCount++;
-        // Log level every 20 chunks to avoid flooding
-        if (_audioChunkCount % 20 == 0) {
-          debugPrint('🎙️ Audio level: ${rmsDb.toStringAsFixed(1)} dB | '
-              'chunks=$_audioChunkCount | '
-              'quiet=${rmsDb < silenceThresholdDb}');
-        }
-        notifyListeners();
-      case AgentPartial(:final text):
-        if (text != liveAgentText) {
-          debugPrint('🤖 Agent partial: $text');
-          liveAgentText = text;
-          notifyListeners();
-        }
-      case AsrPartial(:final text):
-        debugPrint('🗣️ ASR partial: $text');
-        liveTranscript = text;
-        notifyListeners();
-      case AsrFinal(:final text):
-        debugPrint('🗣️ ASR final: $text');
-        liveTranscript = text;
-        latestAgentText = '';
-        notifyListeners();
-      case AgentReply(:final text):
-        debugPrint('🤖 Agent reply: $text');
-        latestAgentText = text;
-        notifyListeners();
-      case ReportPatch(:final finding):
-        debugPrint('📋 Report patch: ${finding['severity']} — ${finding['title']}');
-        final report = liveReport;
-        if (report != null) {
-          report.findings.add(Finding(
-            id: finding['id'] as String,
-            severity: FindingSeverity.values.byName(finding['severity'] as String),
-            title: finding['title'] as String,
-            detail: finding['detail'] as String,
-            timestamp: DateTime.now(),
-          ));
-        }
-        liveTranscript = '';
-        notifyListeners();
-    }
-  }
-
-  void endSession() {
-    final sessionId = liveReport?.sessionId;
-    liveReport = null;
-
-    // Disconnect video stream
-    isVideoRecording = false;
-    _liveVideoItem = null;
-    _videoStreamSub?.cancel();
-    _videoStreamSub = null;
-
-    // Stop audio pipeline
-    if (isAudioRecording) {
-      pipeline.stop();
-    }
-    _audioEventSub?.cancel();
-    _audioEventSub = null;
-    _liveAudioItem = null;
-    isAudioRecording = false;
-    liveTranscript = '';
-    liveAgentText = '';
-    audioLevelDb = -160.0;
-
-    latestAgentText = '';
-    latestAgentRole = AgentRole.orchestrator;
-    pendingAction = RequestedAction.none;
-    currentPointIndex = 0;
-    _pendingPhotoIds = [];
-    chatMessages = [];
-    reportsQueryResults = [];
-    latestAssistantResponse = '';
-    notifyListeners();
-
-    // Notify backend asynchronously
-    if (sessionId != null) {
-      backend.endSession(sessionId);
-    }
-  }
-
-  Future<void> _captureMediaFromPath(MediaKind kind, String filePath) async {
+  Future<void> _uploadMediaFile(
+      MediaKind kind, String filePath, String mimeType) async {
     final report = liveReport;
     if (report == null) return;
 
@@ -453,41 +308,31 @@ class AppState extends ChangeNotifier {
     );
     report.media.add(item);
 
-    // Track photo against the current inspection point.
     if (kind == MediaKind.photo) {
       _pendingPhotoIds.add(id);
     }
-    notifyListeners();
-
-    // Prepare bytes: images → JPG, videos → raw file bytes.
-    final Uint8List bytes;
-    final String mimeType;
-    if (kind == MediaKind.photo) {
-      bytes = await mediaService.toJpgBytes(filePath);
-      mimeType = 'image/jpeg';
-    } else {
-      bytes = await mediaService.readFileBytes(filePath);
-      mimeType = 'video/mp4';
-    }
-
-    // Debug: verify JPG conversion pipeline
-    final isJpeg = bytes.length >= 3 &&
-        bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
-    debugPrint('📸 Media ready: ${bytes.length} bytes | '
-        'mime=$mimeType | jpeg=$isJpeg | point=${point?.id} | src=$filePath');
 
     item.status = MediaStatus.uploading;
     notifyListeners();
 
-    final result = await backend.uploadMedia(
-      sessionId: report.sessionId,
-      kind: kind,
-      bytes: bytes,
-      mimeType: mimeType,
-      zoneId: report.currentZone,
-    );
+    debugPrint('📸 Uploading ${kind.name}: $filePath');
 
-    item.status = result.status;
+    try {
+      final result = await backend.uploadMedia(
+        sessionId: report.sessionId,
+        kind: kind,
+        filePath: filePath,
+        mimeType: mimeType,
+        zoneId: report.currentZone,
+      );
+
+      item.status = result.status;
+      report.findings.addAll(result.addedFindings);
+    } catch (e) {
+      debugPrint('📸 Upload error: $e');
+      item.status = MediaStatus.failed;
+    }
+
     notifyListeners();
   }
 
@@ -504,6 +349,33 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void endSession() {
+    tts.stop();
+    final sessionId = liveReport?.sessionId;
+    liveReport = null;
+
+    isVideoActive = false;
+
+    if (isAudioRecording) {
+      recorder.stop();
+    }
+    isAudioRecording = false;
+
+    latestAgentText = '';
+    latestAgentRole = AgentRole.orchestrator;
+    pendingAction = RequestedAction.none;
+    currentPointIndex = 0;
+    _pendingPhotoIds = [];
+    chatMessages = [];
+    reportsQueryResults = [];
+    latestAssistantResponse = '';
+    notifyListeners();
+
+    if (sessionId != null) {
+      backend.endSession(sessionId);
+    }
+  }
+
   // ── Reports state ──────────────────────────────────────────────────────
 
   List<ChatMessage> chatMessages = [];
@@ -517,12 +389,21 @@ class AppState extends ChangeNotifier {
     reportsBusy = true;
     notifyListeners();
 
-    final result =
-        await backend.queryReports(machineId: machineId, query: query);
+    try {
+      final result = await backend.queryReports(
+        machineId: machineId,
+        query: query,
+        history: chatMessages,
+      );
 
-    reportsQueryResults = result.results;
-    latestAssistantResponse = result.assistantText;
-    _addChat(ChatRole.assistant, result.assistantText);
+      reportsQueryResults = result.results;
+      latestAssistantResponse = result.assistantText;
+      _addChat(ChatRole.assistant, result.assistantText);
+    } catch (e) {
+      debugPrint('Reports query error: $e');
+      latestAssistantResponse = 'Failed to reach the server. Please try again.';
+      _addChat(ChatRole.assistant, latestAssistantResponse);
+    }
 
     reportsBusy = false;
     notifyListeners();
@@ -534,11 +415,17 @@ class AppState extends ChangeNotifier {
     reportsBusy = true;
     notifyListeners();
 
-    final result =
-        await backend.editReport(reportId: reportId, instruction: instruction);
+    try {
+      final result =
+          await backend.editReport(reportId: reportId, instruction: instruction);
 
-    latestAssistantResponse = result.assistantText;
-    _addChat(ChatRole.assistant, result.assistantText);
+      latestAssistantResponse = result.assistantText;
+      _addChat(ChatRole.assistant, result.assistantText);
+    } catch (e) {
+      debugPrint('Report edit error: $e');
+      latestAssistantResponse = 'Failed to update report. Please try again.';
+      _addChat(ChatRole.assistant, latestAssistantResponse);
+    }
 
     reportsBusy = false;
     notifyListeners();

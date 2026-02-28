@@ -13,7 +13,7 @@ class CameraPreviewCard extends StatefulWidget {
     required this.onSnapPhoto,
   });
 
-  /// Driven by AppState.isVideoRecording — caller controls this.
+  /// Driven by AppState.isVideoActive — caller controls this.
   final bool isActive;
 
   /// Called when the inspector taps "Snap Photo" inside the feed.
@@ -88,7 +88,7 @@ class _CameraPreviewCardState extends State<CameraPreviewCard>
       final controller = CameraController(
         cam,
         ResolutionPreset.medium,
-        enableAudio: false, // audio is handled separately by AudioPipeline
+        enableAudio: false,
       );
 
       await controller.initialize();

@@ -4,7 +4,7 @@ enum FindingSeverity { ok, review, critical }
 
 enum MediaKind { photo, video, audio }
 
-enum MediaStatus { streaming, queued, uploading, processing, complete, failed }
+enum MediaStatus { queued, uploading, processing, complete, failed }
 
 enum RequestedAction { none, capturePhoto, captureVideo, confirmOkReviewCritical }
 
@@ -106,6 +106,24 @@ class Finding {
     required this.detail,
     required this.timestamp,
   });
+
+  factory Finding.fromJson(Map<String, dynamic> json) => Finding(
+        id: json['id'] as String,
+        severity: FindingSeverity.values.byName(json['severity'] as String),
+        title: json['title'] as String,
+        detail: json['detail'] as String,
+        timestamp: json['timestamp'] != null
+            ? DateTime.parse(json['timestamp'] as String)
+            : DateTime.now(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'severity': severity.name,
+        'title': title,
+        'detail': detail,
+        'timestamp': timestamp.toIso8601String(),
+      };
 }
 
 class MediaItem {
@@ -189,6 +207,14 @@ class SessionStartResult {
     required this.startingZone,
     required this.startingStep,
   });
+
+  factory SessionStartResult.fromJson(Map<String, dynamic> json) =>
+      SessionStartResult(
+        sessionId: json['sessionId'] as String,
+        initialGuidance: json['initialGuidance'] as String? ?? '',
+        startingZone: json['startingZone'] as String? ?? '',
+        startingStep: json['startingStep'] as String? ?? '',
+      );
 }
 
 // ── Backend response types ─────────────────────────────────────────────────
@@ -196,6 +222,10 @@ class SessionStartResult {
 class InspectTurn {
   final AgentRole source;
   final String agentText;
+
+  /// STT transcript of the uploaded audio, if audio was sent.
+  final String? transcript;
+
   final String? suggestedZone;
   final String? suggestedInspectionPoint;
   final List<Finding> newFindings;
@@ -204,30 +234,26 @@ class InspectTurn {
   const InspectTurn({
     this.source = AgentRole.orchestrator,
     required this.agentText,
+    this.transcript,
     this.suggestedZone,
     this.suggestedInspectionPoint,
     this.newFindings = const [],
     this.requestedAction = RequestedAction.none,
   });
-}
 
-/// Real-time message pushed from backend (video stream observations, etc.)
-class AgentMessage {
-  final AgentRole source;
-  final String text;
-  final List<Finding> findings;
-  final String? suggestedZone;
-  final RequestedAction requestedAction;
-  final DateTime timestamp;
-
-  const AgentMessage({
-    required this.source,
-    required this.text,
-    this.findings = const [],
-    this.suggestedZone,
-    this.requestedAction = RequestedAction.none,
-    required this.timestamp,
-  });
+  factory InspectTurn.fromJson(Map<String, dynamic> json) => InspectTurn(
+        source: AgentRole.values.byName(json['source'] as String? ?? 'orchestrator'),
+        agentText: json['agentText'] as String? ?? '',
+        transcript: json['transcript'] as String?,
+        suggestedZone: json['suggestedZone'] as String?,
+        suggestedInspectionPoint: json['suggestedInspectionPoint'] as String?,
+        newFindings: (json['findings'] as List<dynamic>?)
+                ?.map((f) => Finding.fromJson(f as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        requestedAction: RequestedAction.values.byName(
+            json['requestedAction'] as String? ?? 'none'),
+      );
 }
 
 class MediaProcessResult {
@@ -242,6 +268,17 @@ class MediaProcessResult {
     this.changeScore,
     this.notes = '',
   });
+
+  factory MediaProcessResult.fromJson(Map<String, dynamic> json) =>
+      MediaProcessResult(
+        status: MediaStatus.values.byName(json['status'] as String? ?? 'complete'),
+        addedFindings: (json['findings'] as List<dynamic>?)
+                ?.map((f) => Finding.fromJson(f as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        changeScore: (json['changeScore'] as num?)?.toDouble(),
+        notes: json['notes'] as String? ?? '',
+      );
 }
 
 class ReportSummary {
@@ -256,6 +293,13 @@ class ReportSummary {
     required this.machineId,
     required this.summaryLine,
   });
+
+  factory ReportSummary.fromJson(Map<String, dynamic> json) => ReportSummary(
+        reportId: json['reportId'] as String,
+        date: DateTime.parse(json['date'] as String),
+        machineId: json['machineId'] as String,
+        summaryLine: json['summaryLine'] as String? ?? '',
+      );
 }
 
 class ReportsQueryResult {
@@ -266,6 +310,15 @@ class ReportsQueryResult {
     required this.results,
     required this.assistantText,
   });
+
+  factory ReportsQueryResult.fromJson(Map<String, dynamic> json) =>
+      ReportsQueryResult(
+        results: (json['results'] as List<dynamic>?)
+                ?.map((r) => ReportSummary.fromJson(r as Map<String, dynamic>))
+                .toList() ??
+            const [],
+        assistantText: json['assistantText'] as String? ?? '',
+      );
 }
 
 class ReportUpdateResult {
@@ -273,43 +326,12 @@ class ReportUpdateResult {
   final String assistantText;
 
   const ReportUpdateResult({required this.success, required this.assistantText});
-}
 
-// ── Backend events (audio pipeline) ────────────────────────────────────────
-
-sealed class BackendEvent {
-  const BackendEvent();
-}
-
-class AsrPartial extends BackendEvent {
-  final String text;
-  const AsrPartial(this.text);
-}
-
-class AsrFinal extends BackendEvent {
-  final String text;
-  const AsrFinal(this.text);
-}
-
-class AgentReply extends BackendEvent {
-  final String text;
-  const AgentReply(this.text);
-}
-
-class ReportPatch extends BackendEvent {
-  final Map<String, dynamic> finding;
-  const ReportPatch(this.finding);
-}
-
-class AgentPartial extends BackendEvent {
-  final String text;
-  const AgentPartial(this.text);
-}
-
-class AudioLevel extends BackendEvent {
-  /// RMS level in decibels (0 dB = full scale, -160 dB = silence).
-  final double rmsDb;
-  const AudioLevel(this.rmsDb);
+  factory ReportUpdateResult.fromJson(Map<String, dynamic> json) =>
+      ReportUpdateResult(
+        success: json['success'] as bool? ?? false,
+        assistantText: json['assistantText'] as String? ?? '',
+      );
 }
 
 // ── Chat ───────────────────────────────────────────────────────────────────
@@ -328,4 +350,9 @@ class ChatMessage {
     required this.text,
     required this.timestamp,
   });
+
+  Map<String, dynamic> toJson() => {
+        'role': role.name,
+        'text': text,
+      };
 }

@@ -188,28 +188,18 @@ class _ActiveSessionState extends State<_ActiveSession> {
           _SessionHeader(report: report),
           const SizedBox(height: 10),
           _AgentCard(
-            text: state.liveAgentText.isNotEmpty
-                ? state.liveAgentText
-                : state.latestAgentText,
+            text: state.latestAgentText,
             busy: state.inspectBusy,
             role: state.latestAgentRole,
-            isStreaming: state.liveAgentText.isNotEmpty,
           ),
-          if (state.isAudioRecording || state.liveTranscript.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            _LiveTranscriptCard(
-              text: state.liveTranscript,
-              isListening: state.isAudioRecording,
-            ),
-          ],
           const SizedBox(height: 10),
           _ActionRow(busy: state.inspectBusy),
           const SizedBox(height: 10),
           CameraPreviewCard(
-            isActive: state.isVideoRecording,
+            isActive: state.isVideoActive,
             onSnapPhoto: () => context.read<AppState>().capturePhoto(),
           ),
-          if (state.isVideoRecording) const SizedBox(height: 10),
+          if (state.isVideoActive) const SizedBox(height: 10),
           _ComponentChecklist(state: state, report: report),
           const SizedBox(height: 10),
           _LiveReportCard(report: report),
@@ -268,12 +258,10 @@ class _AgentCard extends StatelessWidget {
     required this.text,
     required this.busy,
     required this.role,
-    this.isStreaming = false,
   });
   final String text;
   final bool busy;
   final AgentRole role;
-  final bool isStreaming;
 
   static const _roleMeta = {
     AgentRole.orchestrator: (label: 'Agent', color: Color(0xFF1A1A1A)),
@@ -324,7 +312,7 @@ class _AgentCard extends StatelessWidget {
               ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: (Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14) *
-                      1.4 * 2, // 2 lines
+                      1.4 * 2,
                 ),
                 child: Text(
                   text.isEmpty ? 'Waiting for guidance…' : text,
@@ -352,21 +340,19 @@ class _ActionRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // PRIMARY: Talk button — full width, voice is the main input
         _TalkButton(
           isListening: state.isAudioRecording,
           busy: busy,
           onToggle: () => context.read<AppState>().toggleAudio(),
         ),
         const SizedBox(height: 8),
-        // SECONDARY: Live feed toggle | Photo evidence | Text note
         Row(
           children: [
             _IconToggle(
               icon: Icons.videocam_outlined,
               activeIcon: Icons.videocam,
-              label: 'Live Feed',
-              isActive: state.isVideoRecording,
+              label: 'Camera',
+              isActive: state.isVideoActive,
               onTap: busy ? null : () => context.read<AppState>().toggleVideo(),
             ),
             const SizedBox(width: 8),
@@ -400,7 +386,7 @@ class _ActionRow extends StatelessWidget {
   }
 }
 
-/// Large primary Talk button — the inspector's main input.
+/// Large primary Talk button — record audio, then upload on release.
 class _TalkButton extends StatelessWidget {
   const _TalkButton({
     required this.isListening,
@@ -433,7 +419,7 @@ class _TalkButton extends StatelessWidget {
           Icon(isListening ? Icons.mic : Icons.mic_none_outlined),
           const SizedBox(width: 8),
           Text(
-            isListening ? 'Listening…  Tap to send' : 'Talk to Agent',
+            isListening ? 'Recording…  Tap to send' : 'Talk to Agent',
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
         ],
@@ -442,7 +428,7 @@ class _TalkButton extends StatelessWidget {
   }
 }
 
-/// Compact toggle for secondary actions (Live Feed, Photo, Note).
+/// Compact toggle for secondary actions (Camera, Photo, Note).
 class _IconToggle extends StatelessWidget {
   const _IconToggle({
     required this.icon,
@@ -531,7 +517,6 @@ class _NoteSheetState extends State<_NoteSheet> {
           Text('Add Finding',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
-          // Severity chips
           Wrap(
             spacing: 8,
             children: FindingSeverity.values.map((s) {
@@ -592,7 +577,6 @@ class _ComponentChecklist extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with zone name and progress.
             Row(
               children: [
                 Expanded(
@@ -617,7 +601,6 @@ class _ComponentChecklist extends StatelessWidget {
             ),
             const Divider(height: 16),
 
-            // Point list.
             ...zone.points.asMap().entries.map((entry) {
               final idx = entry.key;
               final point = entry.value;
@@ -635,7 +618,6 @@ class _ComponentChecklist extends StatelessWidget {
               );
             }),
 
-            // Zone navigation.
             if (state.zones.length > 1) ...[
               const Divider(height: 16),
               SizedBox(
@@ -699,7 +681,6 @@ class _PointTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (check != null) {
-      // Already checked — show result.
       final data = _severityData[check!.severity]!;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
@@ -725,7 +706,6 @@ class _PointTile extends StatelessWidget {
       );
     }
 
-    // Current or upcoming point.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -807,7 +787,6 @@ class _LiveReportCardState extends State<_LiveReportCard> {
                     ?.copyWith(fontWeight: FontWeight.bold)),
             const Divider(height: 16),
 
-            // Findings
             if (report.findings.isEmpty)
               const _EmptyHint(text: 'No findings yet.')
             else
@@ -815,7 +794,6 @@ class _LiveReportCardState extends State<_LiveReportCard> {
                   .take(5)
                   .map((f) => _FindingTile(finding: f)),
 
-            // Media
             if (report.media.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text('Media',
@@ -824,7 +802,6 @@ class _LiveReportCardState extends State<_LiveReportCard> {
               ...report.media.reversed.map((m) => _MediaTile(item: m)),
             ],
 
-            // Debug JSON
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () => setState(() => _jsonExpanded = !_jsonExpanded),
@@ -911,7 +888,6 @@ class _MediaTile extends StatelessWidget {
   final MediaItem item;
 
   static const _statusColors = {
-    MediaStatus.streaming: Colors.red,
     MediaStatus.queued: Colors.grey,
     MediaStatus.uploading: Colors.blue,
     MediaStatus.processing: Colors.orange,
@@ -921,7 +897,7 @@ class _MediaTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColors[item.status]!;
+    final color = _statusColors[item.status] ?? Colors.grey;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -945,77 +921,15 @@ class _MediaTile extends StatelessWidget {
               color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (item.status == MediaStatus.streaming)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Icon(Icons.fiber_manual_record,
-                        size: 8, color: color),
-                  ),
-                Text(
-                  item.status == MediaStatus.streaming
-                      ? 'LIVE'
-                      : item.status.name,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: color,
-                      fontWeight: FontWeight.w600),
-                ),
-              ],
+            child: Text(
+              item.status.name,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Live transcript card ───────────────────────────────────────────────────
-
-class _LiveTranscriptCard extends StatelessWidget {
-  const _LiveTranscriptCard({required this.text, required this.isListening});
-  final String text;
-  final bool isListening;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.grey.shade900,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            if (isListening)
-              const Padding(
-                padding: EdgeInsets.only(right: 10),
-                child: SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white70,
-                  ),
-                ),
-              ),
-            Expanded(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: 14 * 1.4 * 2, // 2 lines at fontSize 14
-                ),
-                child: Text(
-                  text.isEmpty ? 'Listening…' : text,
-                  style: TextStyle(
-                    color: text.isEmpty ? Colors.white38 : Colors.white,
-                    fontSize: 14,
-                    fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
