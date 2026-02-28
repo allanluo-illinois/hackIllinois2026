@@ -1,7 +1,7 @@
 import datetime
 from google.adk.agents import Agent
 from app.tools.adk_tools import save_report_tool, fetch_history_tool, update_report_tool
-
+from app.tools.vision_tools import locate_zone
 # 1. EXHAUSTIVE KEY LISTS (Matching generator.py exactly)
 GROUND_KEYS = [
     "tires_wheels_stem_caps_lug_nuts", "bucket_cutting_edge_moldboard", 
