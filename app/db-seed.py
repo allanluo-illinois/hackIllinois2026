@@ -9,9 +9,8 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # --- EXPANDED CONTEXT-AWARE COMMENTS ---
-# Mapped to your specific component IDs to ensure logical consistency
+# (Kept exactly as you defined them)
 COMMENTS_MAP = {
-    # GROUND SECTION
     "tires_wheels_stem_caps_lug_nuts": {
         "GREEN": ["Inflation looks good, no visible tread damage.", "Lug nuts secure, valve caps present."],
         "YELLOW": ["Tread wear reaching 75% on front left.", "Minor scuffing on sidewall; monitor next shift."],
@@ -77,7 +76,6 @@ COMMENTS_MAP = {
         "YELLOW": ["Minor corrosion buildup on negative terminal.", "Battery hold-down bracket is loose."],
         "RED": ["Leaking battery casing.", "Battery cables are frayed with exposed wire."]
     },
-    # ENGINE SECTION
     "engine_oil_coolant_levels": {
         "GREEN": ["Levels are at the 'Full' mark.", "Coolant color is bright and clear."],
         "YELLOW": ["Engine oil near 'Add' mark.", "Coolant level slightly low; check for slow leak."],
@@ -98,7 +96,6 @@ COMMENTS_MAP = {
         "YELLOW": ["Indicator moving toward the red zone.", "Primary filter looks dusty."],
         "RED": ["Restriction indicator is RED.", "Air intake duct is loose, bypassing filter."]
     },
-    # CAB SECTION
     "rops_safety_equipment": {
         "GREEN": ["ROPS structure is undamaged.", "Fire extinguisher is fully charged."],
         "YELLOW": ["Fire extinguisher gauge is near the recharge limit.", "Minor surface scratches on ROPS posts."],
@@ -122,13 +119,20 @@ COMMENTS_MAP = {
 }
 
 def get_comment(item_id, status):
-    """Retrieves a logical, context-aware comment based on the specific part."""
     if status == "GREEN" and random.random() > 0.3:
-        return "" # Most green items don't need comments for a realistic look
-    
-    # Fallback to general comment if item_id isn't in map (though all are here)
+        return "" 
     options = COMMENTS_MAP.get(item_id, {}).get(status, ["Verified condition."])
     return random.choice(options)
+
+def wipe_database():
+    """Deletes all existing reports to prevent schema conflicts."""
+    print("🗑️ Wiping old database records...")
+    docs = db.collection('inspection_reports').stream()
+    deleted_count = 0
+    for doc in docs:
+        doc.reference.delete()
+        deleted_count += 1
+    print(f"✅ Deleted {deleted_count} legacy reports.")
 
 def seed_database():
     serials = ["1234", "5678"]
@@ -137,15 +141,19 @@ def seed_database():
     for i in range(10):
         sn = serials[i % 2]
         inspector = inspectors[i % 2]
-        date = (datetime.datetime.now() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
         
-        # Determine overall machine health for this specific report
+        # Create a timezone-aware past date for precise sorting
+        past_datetime = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=i)
+        date_str = past_datetime.strftime("%Y-%m-%d")
+        timestamp_str = past_datetime.isoformat()
+        
         primary_status = random.choices(["GREEN", "YELLOW", "RED"], weights=[0.6, 0.3, 0.1])[0]
 
         report = {
             "header": {
                 "serial_number": sn,
-                "date": date,
+                "date": date_str,
+                "timestamp": timestamp_str,  # NEW: Added precise timestamp
                 "inspector": inspector,
                 "machine_hours": 1000 + (i * 8)
             },
@@ -170,7 +178,8 @@ def seed_database():
             "primary_status": primary_status
         }
         db.collection('inspection_reports').add(report)
-        print(f"✅ Seeding Report {i+1}/10 for SN {sn}")
+        print(f"✅ Seeding Report {i+1}/10 for SN {sn} at {timestamp_str}")
 
 if __name__ == "__main__":
+    wipe_database()
     seed_database()
