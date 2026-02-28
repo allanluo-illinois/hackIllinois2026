@@ -4,9 +4,91 @@ enum FindingSeverity { ok, review, critical }
 
 enum MediaKind { photo, video, audio }
 
-enum MediaStatus { queued, uploading, processing, complete, failed }
+enum MediaStatus { streaming, queued, uploading, processing, complete, failed }
 
 enum RequestedAction { none, capturePhoto, captureVideo, confirmOkReviewCritical }
+
+/// Identifies which agent in the multi-agent system produced a response.
+enum AgentRole { orchestrator, vision, safety, reports }
+
+// ── Inspection structure ──────────────────────────────────────────────────
+
+/// A single component to check within a zone.
+class InspectionPoint {
+  final String id;
+  final String component;
+  final String? side;
+
+  const InspectionPoint({
+    required this.id,
+    required this.component,
+    this.side,
+  });
+
+  /// Human-readable label: "bucket_cutting_edge" → "Bucket Cutting Edge".
+  String get displayName {
+    final base = component.replaceAll('_', ' ');
+    final words = base.split(' ').map((w) =>
+        w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}');
+    final label = words.join(' ');
+    return side != null ? '$label (${side!})' : label;
+  }
+
+  factory InspectionPoint.fromJson(Map<String, dynamic> json) =>
+      InspectionPoint(
+        id: json['id'] as String,
+        component: json['component'] as String,
+        side: json['side'] as String?,
+      );
+}
+
+/// A zone on the machine containing multiple inspection points.
+class InspectionZone {
+  final String zoneId;
+  final List<InspectionPoint> points;
+
+  const InspectionZone({required this.zoneId, required this.points});
+
+  String get displayName {
+    final base = zoneId.replaceAll('_', ' ');
+    final words = base.split(' ').map((w) =>
+        w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}');
+    return words.join(' ');
+  }
+
+  factory InspectionZone.fromJson(Map<String, dynamic> json) =>
+      InspectionZone(
+        zoneId: json['zone_id'] as String,
+        points: (json['inspection_points'] as List)
+            .map((p) => InspectionPoint.fromJson(p as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+/// Result of checking one inspection point.
+class CheckResult {
+  final String pointId;
+  final FindingSeverity severity;
+  final String? note;
+  final List<String> photoIds;
+  final DateTime completedAt;
+
+  const CheckResult({
+    required this.pointId,
+    required this.severity,
+    this.note,
+    this.photoIds = const [],
+    required this.completedAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'pointId': pointId,
+        'severity': severity.name,
+        if (note != null) 'note': note,
+        'photoIds': photoIds,
+        'completedAt': completedAt.toIso8601String(),
+      };
+}
 
 // ── Core data classes ──────────────────────────────────────────────────────
 
@@ -52,6 +134,7 @@ class LiveReport {
   String currentStep;
   final List<Finding> findings;
   final List<MediaItem> media;
+  final Map<String, CheckResult> checkedPoints;
 
   LiveReport({
     required this.sessionId,
@@ -61,8 +144,10 @@ class LiveReport {
     this.currentStep = '',
     List<Finding>? findings,
     List<MediaItem>? media,
+    Map<String, CheckResult>? checkedPoints,
   })  : findings = findings ?? [],
-        media = media ?? [];
+        media = media ?? [],
+        checkedPoints = checkedPoints ?? {};
 
   Map<String, dynamic> toJson() => {
         'sessionId': sessionId,
@@ -86,12 +171,30 @@ class LiveReport {
                   'label': m.label,
                 })
             .toList(),
+        'checkedPoints': checkedPoints.map((k, v) => MapEntry(k, v.toJson())),
       };
+}
+
+// ── Session creation result ────────────────────────────────────────────────
+
+class SessionStartResult {
+  final String sessionId;
+  final String initialGuidance;
+  final String startingZone;
+  final String startingStep;
+
+  const SessionStartResult({
+    required this.sessionId,
+    required this.initialGuidance,
+    required this.startingZone,
+    required this.startingStep,
+  });
 }
 
 // ── Backend response types ─────────────────────────────────────────────────
 
 class InspectTurn {
+  final AgentRole source;
   final String agentText;
   final String? suggestedZone;
   final String? suggestedInspectionPoint;
@@ -99,11 +202,31 @@ class InspectTurn {
   final RequestedAction requestedAction;
 
   const InspectTurn({
+    this.source = AgentRole.orchestrator,
     required this.agentText,
     this.suggestedZone,
     this.suggestedInspectionPoint,
     this.newFindings = const [],
     this.requestedAction = RequestedAction.none,
+  });
+}
+
+/// Real-time message pushed from backend (video stream observations, etc.)
+class AgentMessage {
+  final AgentRole source;
+  final String text;
+  final List<Finding> findings;
+  final String? suggestedZone;
+  final RequestedAction requestedAction;
+  final DateTime timestamp;
+
+  const AgentMessage({
+    required this.source,
+    required this.text,
+    this.findings = const [],
+    this.suggestedZone,
+    this.requestedAction = RequestedAction.none,
+    required this.timestamp,
   });
 }
 

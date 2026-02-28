@@ -1,12 +1,37 @@
+import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
+
 import 'backend_port.dart';
 import 'models.dart';
 
 class MockBackend implements BackendPort {
   final _rng = Random();
   int _turnCount = 0;
+  StreamController<AgentMessage>? _videoStreamController;
+  Timer? _videoTimer;
 
-  // ── Inspect ────────────────────────────────────────────────────────────
+  // ── Session lifecycle ───────────────────────────────────────────────────
+
+  @override
+  Future<SessionStartResult> createSession(String machineId) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+    _turnCount = 0;
+    return SessionStartResult(
+      sessionId: 'sess_${DateTime.now().millisecondsSinceEpoch}',
+      initialGuidance:
+          'Session started for $machineId. Begin at the front of the machine — inspect the bucket cutting edge.',
+      startingZone: 'Front / Bucket Area',
+      startingStep: 'Begin walk-around',
+    );
+  }
+
+  @override
+  Future<void> endSession(String sessionId) async {
+    await disconnectVideoStream(sessionId);
+  }
+
+  // ── Inspect ─────────────────────────────────────────────────────────────
 
   static const _agentLines = [
     'Check the bucket cutting edge for cracks or excessive wear.',
@@ -41,18 +66,35 @@ class MockBackend implements BackendPort {
     'Functional check',
   ];
 
+  static const _roles = [
+    AgentRole.orchestrator,
+    AgentRole.orchestrator,
+    AgentRole.safety,
+    AgentRole.orchestrator,
+  ];
+
   @override
-  Future<InspectTurn> sendInspectMessage({
+  Future<InspectTurn> sendInspectTurn({
     required String sessionId,
-    required String text,
-    String? zoneId,
-    String? inspectionPointId,
+    required String zoneId,
+    String? text,
+    Uint8List? audioBytes,
+    Uint8List? imageBytes,
+    String? mimeType,
   }) async {
     await Future.delayed(const Duration(milliseconds: 700));
 
     final idx = _turnCount % _agentLines.length;
     final zoneIdx = _turnCount ~/ 2 % _zones.length;
     _turnCount++;
+
+    // Determine modality-specific response prefix
+    String prefix = '';
+    if (audioBytes != null) {
+      prefix = '[Transcribed] ';
+    } else if (imageBytes != null) {
+      prefix = '[Photo analysis] ';
+    }
 
     final addFinding = _rng.nextDouble() > 0.5;
     final findings = addFinding
@@ -62,8 +104,12 @@ class MockBackend implements BackendPort {
               severity: _rng.nextDouble() > 0.6
                   ? FindingSeverity.review
                   : FindingSeverity.ok,
-              title: inspectionPointId ?? 'Component check',
-              detail: text.isEmpty ? 'No issues noted.' : text,
+              title: text ?? 'Component check',
+              detail: imageBytes != null
+                  ? 'Photo shows normal condition.'
+                  : (text?.isEmpty ?? true)
+                      ? 'No issues noted.'
+                      : text!,
               timestamp: DateTime.now(),
             )
           ]
@@ -75,7 +121,8 @@ class MockBackend implements BackendPort {
         : RequestedAction.none;
 
     return InspectTurn(
-      agentText: _agentLines[idx],
+      source: _roles[_rng.nextInt(_roles.length)],
+      agentText: '$prefix${_agentLines[idx]}',
       suggestedZone: _zones[zoneIdx],
       suggestedInspectionPoint: _steps[_rng.nextInt(_steps.length)],
       newFindings: findings,
@@ -83,17 +130,58 @@ class MockBackend implements BackendPort {
     );
   }
 
-  // ── Media ──────────────────────────────────────────────────────────────
+  // ── Live video stream ───────────────────────────────────────────────────
+
+  static const _visionObservations = [
+    'Live feed: bucket area appears clear.',
+    'Detected possible fluid residue near left cylinder.',
+    'Tire tread within acceptable range.',
+    'No visible damage on service panel hoses.',
+    'Radiator grille clear of debris.',
+  ];
+
+  @override
+  Stream<AgentMessage> connectVideoStream({
+    required String sessionId,
+    required String zoneId,
+  }) {
+    _videoStreamController?.close();
+    _videoTimer?.cancel();
+
+    _videoStreamController = StreamController<AgentMessage>.broadcast();
+    int obsIdx = 0;
+
+    _videoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_videoStreamController?.isClosed ?? true) return;
+      _videoStreamController!.add(AgentMessage(
+        source: AgentRole.vision,
+        text: _visionObservations[obsIdx % _visionObservations.length],
+        timestamp: DateTime.now(),
+      ));
+      obsIdx++;
+    });
+
+    return _videoStreamController!.stream;
+  }
+
+  @override
+  Future<void> disconnectVideoStream(String sessionId) async {
+    _videoTimer?.cancel();
+    _videoTimer = null;
+    await _videoStreamController?.close();
+    _videoStreamController = null;
+  }
+
+  // ── Media ───────────────────────────────────────────────────────────────
 
   @override
   Future<MediaProcessResult> uploadMedia({
     required String sessionId,
     required MediaKind kind,
-    required String filePath,
+    required Uint8List bytes,
+    required String mimeType,
     String? zoneId,
-    String? inspectionPointId,
   }) async {
-    // Simulate upload → processing → complete
     await Future.delayed(const Duration(seconds: 1)); // uploading
     await Future.delayed(const Duration(seconds: 1)); // processing
 
@@ -122,7 +210,7 @@ class MockBackend implements BackendPort {
     );
   }
 
-  // ── Reports ────────────────────────────────────────────────────────────
+  // ── Reports ─────────────────────────────────────────────────────────────
 
   @override
   Future<ReportsQueryResult> queryReports({
@@ -178,7 +266,7 @@ class MockBackend implements BackendPort {
     return ReportsQueryResult(results: results, assistantText: assistantText);
   }
 
-  // ── Edit ───────────────────────────────────────────────────────────────
+  // ── Edit ─────────────────────────────────────────────────────────────────
 
   @override
   Future<ReportUpdateResult> editReport({
@@ -191,5 +279,13 @@ class MockBackend implements BackendPort {
       assistantText:
           'Report $reportId updated: "$instruction". Changes saved successfully.',
     );
+  }
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────
+
+  @override
+  void dispose() {
+    _videoTimer?.cancel();
+    _videoStreamController?.close();
   }
 }

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_shell.dart';
 import 'core/app_state.dart';
+import 'core/audio_capture.dart';
+import 'core/audio_pipeline.dart';
+import 'core/audio_transport.dart';
 import 'core/mock_backend.dart';
 
 // CAT brand colours
@@ -12,9 +15,19 @@ const _catCharcoal = Color(0xFF2C2C2C);
 const _catPaleYellow = Color(0xFFFFF3C4);
 
 void main() {
+  // ── Dependency injection ──────────────────────────────────────────────
+  // Swap these for real implementations when integrating:
+  //   backend:  HttpBackend(baseUrl: '...') or WebSocketBackend(...)
+  //   pipeline: AudioPipeline(source: RealAudioSource(), transport: WsAudioTransport(...))
+  final backend = MockBackend();
+  final pipeline = AudioPipeline(
+    source: AvFoundationAudioSource(),
+    transport: MockAudioTransport(),
+  );
+
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState(MockBackend()),
+      create: (_) => AppState(backend: backend, pipeline: pipeline),
       child: const CatInspectorApp(),
     ),
   );

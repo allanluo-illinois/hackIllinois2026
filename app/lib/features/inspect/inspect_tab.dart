@@ -187,17 +187,20 @@ class _ActiveSessionState extends State<_ActiveSession> {
         children: [
           _SessionHeader(report: report),
           const SizedBox(height: 10),
-          _AgentCard(text: state.latestAgentText, busy: state.inspectBusy),
+          _AgentCard(
+            text: state.liveAgentText.isNotEmpty
+                ? state.liveAgentText
+                : state.latestAgentText,
+            busy: state.inspectBusy,
+            role: state.latestAgentRole,
+            isStreaming: state.liveAgentText.isNotEmpty,
+          ),
           if (state.isAudioRecording || state.liveTranscript.isNotEmpty) ...[
             const SizedBox(height: 10),
             _LiveTranscriptCard(
               text: state.liveTranscript,
               isListening: state.isAudioRecording,
             ),
-          ],
-          if (state.liveAgentText.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            _LiveAgentCard(text: state.liveAgentText),
           ],
           const SizedBox(height: 10),
           _ActionRow(busy: state.inspectBusy),
@@ -207,6 +210,8 @@ class _ActiveSessionState extends State<_ActiveSession> {
             onSnapPhoto: () => context.read<AppState>().capturePhoto(),
           ),
           if (state.isVideoRecording) const SizedBox(height: 10),
+          _ComponentChecklist(state: state, report: report),
+          const SizedBox(height: 10),
           _LiveReportCard(report: report),
         ],
       ),
@@ -259,32 +264,75 @@ class _SessionHeader extends StatelessWidget {
 // ── Agent guidance card ────────────────────────────────────────────────────
 
 class _AgentCard extends StatelessWidget {
-  const _AgentCard({required this.text, required this.busy});
+  const _AgentCard({
+    required this.text,
+    required this.busy,
+    required this.role,
+    this.isStreaming = false,
+  });
   final String text;
   final bool busy;
+  final AgentRole role;
+  final bool isStreaming;
+
+  static const _roleMeta = {
+    AgentRole.orchestrator: (label: 'Agent', color: Color(0xFF1A1A1A)),
+    AgentRole.vision: (label: 'Vision', color: Color(0xFF1565C0)),
+    AgentRole.safety: (label: 'Safety', color: Color(0xFFEF6C00)),
+    AgentRole.reports: (label: 'Reports', color: Color(0xFF6A1B9A)),
+  };
 
   @override
   Widget build(BuildContext context) {
+    final meta = _roleMeta[role]!;
     return Card(
       color: Theme.of(context).colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.volume_up_outlined, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: busy
-                  ? const SizedBox(
-                      height: 20,
-                      child: LinearProgressIndicator(),
-                    )
-                  : Text(
-                      text.isEmpty ? 'Waiting for guidance…' : text,
-                      style: Theme.of(context).textTheme.bodyMedium,
+            Row(
+              children: [
+                const Icon(Icons.volume_up_outlined, size: 20),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: meta.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    meta.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: meta.color,
                     ),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (busy)
+              const SizedBox(
+                height: 20,
+                child: LinearProgressIndicator(),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: (Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14) *
+                      1.4 * 2, // 2 lines
+                ),
+                child: Text(
+                  text.isEmpty ? 'Waiting for guidance…' : text,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
           ],
         ),
       ),
@@ -523,6 +571,213 @@ class _NoteSheetState extends State<_NoteSheet> {
   }
 }
 
+// ── Component checklist card ──────────────────────────────────────────────
+
+class _ComponentChecklist extends StatelessWidget {
+  const _ComponentChecklist({required this.state, required this.report});
+  final AppState state;
+  final LiveReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final zone = state.activeZone;
+    if (zone == null) return const SizedBox.shrink();
+
+    final checkedCount =
+        zone.points.where((p) => report.checkedPoints.containsKey(p.id)).length;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with zone name and progress.
+            Row(
+              children: [
+                Expanded(
+                  child: Text(zone.displayName,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
+                Text('$checkedCount / ${zone.points.length}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.outline)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            LinearProgressIndicator(
+              value: zone.points.isEmpty
+                  ? 0
+                  : checkedCount / zone.points.length,
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            const Divider(height: 16),
+
+            // Point list.
+            ...zone.points.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final point = entry.value;
+              final check = report.checkedPoints[point.id];
+              final isCurrent = idx == state.currentPointIndex && check == null;
+
+              return _PointTile(
+                point: point,
+                check: check,
+                isCurrent: isCurrent,
+                onMark: isCurrent
+                    ? (severity) =>
+                        context.read<AppState>().markPointChecked(severity)
+                    : null,
+              );
+            }),
+
+            // Zone navigation.
+            if (state.zones.length > 1) ...[
+              const Divider(height: 16),
+              SizedBox(
+                height: 32,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: state.zones.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) {
+                    final z = state.zones[i];
+                    final isActive = z.zoneId == report.currentZone;
+                    final zoneChecked = z.points
+                        .where((p) =>
+                            report.checkedPoints.containsKey(p.id))
+                        .length;
+                    final zoneDone = zoneChecked == z.points.length;
+                    return FilterChip(
+                      label: Text(
+                        '${z.displayName} ($zoneChecked/${z.points.length})',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      selected: isActive,
+                      showCheckmark: zoneDone,
+                      onSelected: (_) =>
+                          context.read<AppState>().setZone(z.zoneId),
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A single inspection point row with severity quick-action buttons.
+class _PointTile extends StatelessWidget {
+  const _PointTile({
+    required this.point,
+    required this.check,
+    required this.isCurrent,
+    this.onMark,
+  });
+  final InspectionPoint point;
+  final CheckResult? check;
+  final bool isCurrent;
+  final void Function(FindingSeverity)? onMark;
+
+  static const _severityData = {
+    FindingSeverity.ok: (icon: Icons.check_circle, color: Colors.green, label: 'OK'),
+    FindingSeverity.review:
+        (icon: Icons.warning_amber, color: Colors.orange, label: 'Review'),
+    FindingSeverity.critical:
+        (icon: Icons.error, color: Colors.red, label: 'Critical'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (check != null) {
+      // Already checked — show result.
+      final data = _severityData[check!.severity]!;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Icon(data.icon, size: 18, color: data.color),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(point.displayName,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.outline,
+                    decoration: TextDecoration.lineThrough,
+                  )),
+            ),
+            Text(data.label,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: data.color,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+    }
+
+    // Current or upcoming point.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(
+            isCurrent ? Icons.arrow_right : Icons.radio_button_unchecked,
+            size: 18,
+            color: isCurrent
+                ? const Color(0xFFFFCD11)
+                : Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(point.displayName,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                )),
+          ),
+          if (isCurrent && onMark != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: FindingSeverity.values.map((s) {
+                final data = _severityData[s]!;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => onMark!(s),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: data.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(data.label,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: data.color,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Live report card ───────────────────────────────────────────────────────
 
 class _LiveReportCard extends StatefulWidget {
@@ -656,6 +911,7 @@ class _MediaTile extends StatelessWidget {
   final MediaItem item;
 
   static const _statusColors = {
+    MediaStatus.streaming: Colors.red,
     MediaStatus.queued: Colors.grey,
     MediaStatus.uploading: Colors.blue,
     MediaStatus.processing: Colors.orange,
@@ -689,12 +945,25 @@ class _MediaTile extends StatelessWidget {
               color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
-              item.status.name,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: FontWeight.w600),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (item.status == MediaStatus.streaming)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(Icons.fiber_manual_record,
+                        size: 8, color: color),
+                  ),
+                Text(
+                  item.status == MediaStatus.streaming
+                      ? 'LIVE'
+                      : item.status.name,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: color,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
         ],
@@ -729,46 +998,19 @@ class _LiveTranscriptCard extends StatelessWidget {
                 ),
               ),
             Expanded(
-              child: Text(
-                text.isEmpty ? 'Listening…' : text,
-                style: TextStyle(
-                  color: text.isEmpty ? Colors.white38 : Colors.white,
-                  fontSize: 14,
-                  fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: 14 * 1.4 * 2, // 2 lines at fontSize 14
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Live agent card ────────────────────────────────────────────────────────
-
-class _LiveAgentCard extends StatelessWidget {
-  const _LiveAgentCard({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: const Color(0xFF1A3A1A),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.assistant, size: 18, color: Color(0xFF66BB6A)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                text,
-                style: const TextStyle(
-                  color: Color(0xFFB9F6CA),
-                  fontSize: 13,
-                  height: 1.4,
+                child: Text(
+                  text.isEmpty ? 'Listening…' : text,
+                  style: TextStyle(
+                    color: text.isEmpty ? Colors.white38 : Colors.white,
+                    fontSize: 14,
+                    fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
