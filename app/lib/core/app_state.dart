@@ -68,6 +68,9 @@ class AppState extends ChangeNotifier {
   /// Live partial transcript updated in real time while recording.
   String liveTranscript = '';
 
+  /// Live agent guidance updated in real time while recording.
+  String liveAgentText = '';
+
   /// Current microphone RMS level in dB (0 = full scale, -160 = silence).
   double audioLevelDb = -160.0;
 
@@ -99,6 +102,7 @@ class AppState extends ChangeNotifier {
       await _pipeline.stop();
       isAudioRecording = false;
       liveTranscript = '';
+      liveAgentText = '';
       audioLevelDb = -160.0;
       notifyListeners();
     } else {
@@ -116,8 +120,12 @@ class AppState extends ChangeNotifier {
     switch (event) {
       case AudioLevel(:final rmsDb):
         audioLevelDb = rmsDb;
-        debugPrint('🎚️ level: ${rmsDb.toStringAsFixed(1)} dB${rmsDb < silenceThresholdDb ? " [TOO QUIET]" : ""}');
         notifyListeners();
+      case AgentPartial(:final text):
+        if (text != liveAgentText) {
+          liveAgentText = text;
+          notifyListeners();
+        }
       case AsrPartial(:final text):
         liveTranscript = text;
         notifyListeners();
@@ -154,6 +162,7 @@ class AppState extends ChangeNotifier {
     _eventSub = null;
     isAudioRecording = false;
     liveTranscript = '';
+    liveAgentText = '';
     audioLevelDb = -160.0;
     latestAgentText = '';
     pendingAction = RequestedAction.none;

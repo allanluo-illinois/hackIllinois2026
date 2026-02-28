@@ -178,6 +178,11 @@ class ReportPatch extends BackendEvent {
   const ReportPatch(this.finding);
 }
 
+class AgentPartial extends BackendEvent {
+  final String text;
+  const AgentPartial(this.text);
+}
+
 class AudioLevel extends BackendEvent {
   /// RMS level in decibels (0 dB = full scale, -160 dB = silence).
   final double rmsDb;

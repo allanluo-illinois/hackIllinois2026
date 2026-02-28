@@ -195,6 +195,10 @@ class _ActiveSessionState extends State<_ActiveSession> {
               isListening: state.isAudioRecording,
             ),
           ],
+          if (state.liveAgentText.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _LiveAgentCard(text: state.liveAgentText),
+          ],
           const SizedBox(height: 10),
           _ActionRow(busy: state.inspectBusy),
           const SizedBox(height: 10),
@@ -731,6 +735,40 @@ class _LiveTranscriptCard extends StatelessWidget {
                   color: text.isEmpty ? Colors.white38 : Colors.white,
                   fontSize: 14,
                   fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Live agent card ────────────────────────────────────────────────────────
+
+class _LiveAgentCard extends StatelessWidget {
+  const _LiveAgentCard({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color(0xFF1A3A1A),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.assistant, size: 18, color: Color(0xFF66BB6A)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Color(0xFFB9F6CA),
+                  fontSize: 13,
+                  height: 1.4,
                 ),
               ),
             ),
