@@ -1,0 +1,394 @@
+[
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Speaker is talking about buying organic items.",
+    "transcript": "I think for the first few months, I wasn't even buying organic, you know, vitamins and food, by and large.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:39:42.127323",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0001"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "What is your main folder called? Tech-One?",
+    "transcript": "What is your main folder called? Tech-One?",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:39:48.610782",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0002"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "You're training.",
+    "transcript": "You're training.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:39:53.933678",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0003"
+  },
+  {
+    "part": "lights_front_rear",
+    "section": "GROUND",
+    "status": "RED",
+    "comment": "Not working",
+    "transcript": "It's not working. Especially one behind his own.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:40:01.476519",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0004"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Big files, unclear what part it refers to.",
+    "transcript": "That was just like, there was like big files that I I.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:40:08.020161",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0005"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Okay.",
+    "transcript": "Okay.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:40:11.704866",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0006"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "RED",
+    "comment": "Total washout for both of us.",
+    "transcript": "Yeah. A total washout for both of us.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:40:16.837708",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0007"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Speaker is not describing a part.",
+    "transcript": "Do you think you'll be stressed for the rest of your life?",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:40:29.416819",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0008"
+  },
+  {
+    "part": "steps_handholds",
+    "section": "GROUND",
+    "status": "GREEN",
+    "comment": "Can do it normally.",
+    "transcript": "I can do it normally. Yeah, I can do all my hand properly. Like, you already pushing to a branch, right? So yeah, I can just try doing it normally.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:06.881107",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0009"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "unknown",
+    "comment": "Inability to see something",
+    "transcript": "Like, it's like, sometimes when I do that, like, I can't see the, like.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:13.908417",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0010"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Thank you.",
+    "transcript": "Thank you.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:17.966940",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0011"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "unknown",
+    "comment": "Unclear observation.",
+    "transcript": "Right. Like, you won't be able to just drag and drop it off.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:23.455106",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0012"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "All working",
+    "transcript": "All of you guys will try to work.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:28.909313",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0013"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "No issues reported.",
+    "transcript": "Oh, really?",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:33.548569",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0014"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Important stuff, no issues.",
+    "transcript": "Yeah, this is, this is important stuff I think for us.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:42.796352",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0015"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "unknown",
+    "comment": "homeless",
+    "transcript": "...homeless.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:46.807226",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0016"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Okay, good.",
+    "transcript": "First, let me merge from the main branch, right? Okay, good.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:44:53.681085",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0017"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Speaker is trying to leave before it rains.",
+    "transcript": "Well, let's see if I'm going to try to get out of here before it starts to rain.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:45:01.028345",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0018"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "Affirmative.",
+    "transcript": "Yeah.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:45:04.352692",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0019"
+  },
+  {
+    "part": "unknown",
+    "section": "UNKNOWN",
+    "status": "GREEN",
+    "comment": "You don't necessarily agree.",
+    "transcript": "You don't necessarily agree.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:45:08.441725",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0020"
+  },
+  {
+    "part": "fuel_tank",
+    "section": "GROUND",
+    "status": "unknown",
+    "comment": "I've been told.",
+    "transcript": "Uh, tri-state fuel tank, I've been told.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:47:35.246522",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0021"
+  },
+  {
+    "part": "fuel_tank",
+    "section": "GROUND",
+    "status": "GREEN",
+    "comment": "Fuel tank.",
+    "transcript": "Fuel tank.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T11:47:45.859561",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0022"
+  },
+  {
+    "part": "axles_brakes_seals",
+    "section": "GROUND",
+    "status": "RED",
+    "comment": "leak",
+    "transcript": "Oh, Axel brake seals would leak.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T12:04:01.728935",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0023"
+  },
+  {
+    "part": "def_tank",
+    "section": "GROUND",
+    "status": "UNKNOWN",
+    "comment": "zero number is 1 2 3 4 5",
+    "transcript": "Uh, death zero number is 1 2 3 4 5.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T14:07:22.972352",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0024"
+  },
+  {
+    "part": "overall_machine",
+    "section": "GROUND",
+    "status": "GREEN",
+    "comment": "Serial number is 12345.",
+    "transcript": "The serial number is 12345.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T14:22:58.429408",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0025"
+  },
+  {
+    "part": "overall_machine",
+    "section": "GROUND",
+    "status": "GREEN",
+    "comment": "Everything is perfect.",
+    "transcript": "it's okay. Oh, everything is perfect.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T15:48:43.508870",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0026"
+  },
+  {
+    "part": "overall_machine",
+    "section": "GROUND",
+    "status": "GREEN",
+    "comment": "Everything is good.",
+    "transcript": "Alright, everything is good.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T16:04:11.008571",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0027"
+  },
+  {
+    "part": "overall_machine",
+    "section": "GROUND",
+    "status": "YELLOW",
+    "comment": "Double spots observed on the machine.",
+    "transcript": "Double spots. We're doing spots.",
+    "frames": [
+      "frame_1.jpg",
+      "frame_2.jpg",
+      "frame_3.jpg"
+    ],
+    "timestamp": "2026-02-28T16:04:21.835788",
+    "sample_dir": "D:\\Voyager\\MJ\\Projects\\HackIllinois\\dataset\\sample_0028"
+  }
+]

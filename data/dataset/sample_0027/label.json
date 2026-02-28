@@ -1,0 +1,13 @@
+{
+  "part": "overall_machine",
+  "section": "GROUND",
+  "status": "GREEN",
+  "comment": "Everything is good.",
+  "transcript": "Alright, everything is good.",
+  "frames": [
+    "frame_1.jpg",
+    "frame_2.jpg",
+    "frame_3.jpg"
+  ],
+  "timestamp": "2026-02-28T16:04:11.008571"
+}
