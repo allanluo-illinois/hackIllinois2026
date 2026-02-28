@@ -47,15 +47,7 @@ class _ReportsTabState extends State<ReportsTab> {
           // ── 1. Query Results ─────────────────────────────────────────────
           _QueryResultsRow(results: state.reportsQueryResults),
 
-          // ── 2. Assistant Response ────────────────────────────────────────
-          _AssistantResponseBox(
-            text: state.latestAssistantResponse,
-            busy: state.reportsBusy,
-          ),
-
-          const Divider(height: 1),
-
-          // ── 3. Chat history ──────────────────────────────────────────────
+          // ── 2. Chat history ──────────────────────────────────────────────
           Expanded(
             child: state.chatMessages.isEmpty
                 ? const _EmptyHistory()

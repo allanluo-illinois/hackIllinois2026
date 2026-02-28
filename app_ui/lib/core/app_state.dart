@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'audio_capture.dart';
 import 'backend_port.dart';
 import 'http_backend.dart';
@@ -26,7 +24,7 @@ class AppState extends ChangeNotifier {
     required this.recorder,
     required this.mediaService,
     required this.tts,
-    String backendUrl = 'http://localhost:8080',
+    String backendUrl = 'http://localhost:8000',
   }) : _backendUrl = backendUrl {
     tts.onStateChanged = () => notifyListeners();
   }
@@ -47,111 +45,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Inspection structure (loaded from components.json) ────────────────
-
-  List<InspectionZone> zones = [];
-  bool _zonesLoaded = false;
-
-  Future<void> _ensureZonesLoaded() async {
-    if (_zonesLoaded) return;
-    final raw = await rootBundle.loadString('assets/components.json');
-    final json = jsonDecode(raw) as Map<String, dynamic>;
-    zones = (json['zones'] as List)
-        .map((z) => InspectionZone.fromJson(z as Map<String, dynamic>))
-        .toList();
-    _zonesLoaded = true;
-  }
-
-  /// The zone currently being inspected.
-  InspectionZone? get activeZone {
-    final zoneId = liveReport?.currentZone;
-    if (zoneId == null || zones.isEmpty) return null;
-    return zones.cast<InspectionZone?>().firstWhere(
-          (z) => z!.zoneId == zoneId || z.displayName == zoneId,
-          orElse: () => null,
-        );
-  }
-
-  /// The inspection point the operator is currently on.
-  int currentPointIndex = 0;
-
-  InspectionPoint? get currentPoint {
-    final zone = activeZone;
-    if (zone == null || currentPointIndex >= zone.points.length) return null;
-    return zone.points[currentPointIndex];
-  }
-
-  /// Photos taken for the current inspection point (before marking complete).
-  List<String> _pendingPhotoIds = [];
-
-  /// Mark the current inspection point as checked with a severity.
-  void markPointChecked(FindingSeverity severity, {String? note}) {
-    final report = liveReport;
-    final point = currentPoint;
-    if (report == null || point == null) return;
-
-    final result = CheckResult(
-      pointId: point.id,
-      severity: severity,
-      note: note,
-      photoIds: List.unmodifiable(_pendingPhotoIds),
-      completedAt: DateTime.now(),
-    );
-    report.checkedPoints[point.id] = result;
-
-    report.findings.add(Finding(
-      id: 'check_${point.id}',
-      severity: severity,
-      title: point.displayName,
-      detail: note ?? severity.name.toUpperCase(),
-      timestamp: DateTime.now(),
-    ));
-
-    _pendingPhotoIds = [];
-    _advanceToNextPoint();
-    notifyListeners();
-  }
-
-  void _advanceToNextPoint() {
-    final zone = activeZone;
-    final report = liveReport;
-    if (zone == null || report == null) return;
-
-    for (var i = currentPointIndex + 1; i < zone.points.length; i++) {
-      if (!report.checkedPoints.containsKey(zone.points[i].id)) {
-        currentPointIndex = i;
-        report.currentStep = zone.points[i].displayName;
-        return;
-      }
-    }
-    currentPointIndex = zone.points.length;
-    report.currentStep = 'Zone complete';
-  }
-
-  /// Move to a specific zone by ID.
-  void setZone(String zoneId) {
-    final report = liveReport;
-    if (report == null) return;
-    report.currentZone = zoneId;
-    currentPointIndex = 0;
-    _pendingPhotoIds = [];
-
-    final zone = activeZone;
-    if (zone != null) {
-      for (var i = 0; i < zone.points.length; i++) {
-        if (!report.checkedPoints.containsKey(zone.points[i].id)) {
-          currentPointIndex = i;
-          report.currentStep = zone.points[i].displayName;
-          notifyListeners();
-          return;
-        }
-      }
-      currentPointIndex = zone.points.length;
-      report.currentStep = 'Zone complete';
-    }
-    notifyListeners();
-  }
-
   // ── Inspect state ──────────────────────────────────────────────────────
 
   LiveReport? liveReport;
@@ -166,30 +59,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _ensureZonesLoaded();
       final result = await backend.createSession(machineId);
-
-      final startZone =
-          zones.isNotEmpty ? zones.first.zoneId : result.startingZone;
 
       liveReport = LiveReport(
         sessionId: result.sessionId,
         machineId: machineId,
         startedAt: DateTime.now(),
-        currentZone: startZone,
+        currentZone: result.startingZone,
         currentStep: result.startingStep,
       );
-
-      currentPointIndex = 0;
-      _pendingPhotoIds = [];
-      final firstPoint = currentPoint;
-      if (firstPoint != null) {
-        liveReport!.currentStep = firstPoint.displayName;
-      }
 
       latestAgentText = result.initialGuidance;
       latestAgentRole = AgentRole.orchestrator;
       pendingAction = RequestedAction.none;
+      isVideoActive = true;
 
       tts.speak(latestAgentText);
     } catch (e) {
@@ -216,6 +99,31 @@ class AppState extends ChangeNotifier {
     }
     report.findings.addAll(turn.newFindings);
     tts.speak(latestAgentText);
+  }
+
+  // ── Text turn (type → send → response) ────────────────────────────────
+
+  Future<void> sendTextTurn(String text) async {
+    final report = liveReport;
+    if (report == null || text.trim().isEmpty) return;
+
+    inspectBusy = true;
+    notifyListeners();
+
+    try {
+      final turn = await backend.sendInspectTurn(
+        sessionId: report.sessionId,
+        zoneId: report.currentZone,
+        text: text.trim(),
+      );
+      _applyTurn(turn, report);
+    } catch (e) {
+      debugPrint('Text turn error: $e');
+      lastError = 'Failed to send message. Check connection and try again.';
+    }
+
+    inspectBusy = false;
+    notifyListeners();
   }
 
   // ── Audio recording (record → upload → response) ─────────────────────
@@ -318,21 +226,15 @@ class AppState extends ChangeNotifier {
     if (report == null) return;
 
     final id = 'media_${DateTime.now().millisecondsSinceEpoch}';
-    final point = currentPoint;
-    final pointLabel = point?.displayName ?? report.currentZone;
     final item = MediaItem(
       id: id,
       kind: kind,
       status: MediaStatus.queued,
-      label: '${kind.name} – $pointLabel',
+      label: '${kind.name} – ${report.currentZone}',
       timestamp: DateTime.now(),
       localPath: filePath,
     );
     report.media.add(item);
-
-    if (kind == MediaKind.photo) {
-      _pendingPhotoIds.add(id);
-    }
 
     item.status = MediaStatus.uploading;
     notifyListeners();
@@ -387,8 +289,6 @@ class AppState extends ChangeNotifier {
     latestAgentText = '';
     latestAgentRole = AgentRole.orchestrator;
     pendingAction = RequestedAction.none;
-    currentPointIndex = 0;
-    _pendingPhotoIds = [];
     chatMessages = [];
     reportsQueryResults = [];
     latestAssistantResponse = '';

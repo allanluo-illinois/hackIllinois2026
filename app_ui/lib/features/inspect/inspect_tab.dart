@@ -264,8 +264,6 @@ class _ActiveSessionState extends State<_ActiveSession> {
             onSnapPhoto: () => context.read<AppState>().capturePhoto(),
           ),
           if (state.isVideoActive) const SizedBox(height: 10),
-          _ComponentChecklist(state: state, report: report),
-          const SizedBox(height: 10),
           _LiveReportCard(report: report),
         ],
       ),
@@ -394,9 +392,29 @@ class _AgentCard extends StatelessWidget {
 
 // ── Action row ─────────────────────────────────────────────────────────────
 
-class _ActionRow extends StatelessWidget {
+class _ActionRow extends StatefulWidget {
   const _ActionRow({required this.busy});
   final bool busy;
+
+  @override
+  State<_ActionRow> createState() => _ActionRowState();
+}
+
+class _ActionRowState extends State<_ActionRow> {
+  final _textCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    super.dispose();
+  }
+
+  void _sendText() {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty || widget.busy) return;
+    _textCtrl.clear();
+    context.read<AppState>().sendTextTurn(text);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -404,9 +422,46 @@ class _ActionRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _textCtrl,
+                enabled: !widget.busy,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendText(),
+                decoration: InputDecoration(
+                  hintText: 'Type a message to the agent…',
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  isDense: true,
+                  suffixIcon: widget.busy
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              icon: const Icon(Icons.send),
+              onPressed: widget.busy ? null : _sendText,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         _TalkButton(
           isListening: state.isAudioRecording,
-          busy: busy,
+          busy: widget.busy,
           onToggle: () => context.read<AppState>().toggleAudio(),
         ),
         const SizedBox(height: 8),
@@ -415,17 +470,10 @@ class _ActionRow extends StatelessWidget {
             _IconToggle(
               icon: Icons.videocam_outlined,
               activeIcon: Icons.videocam,
-              label: 'Camera',
+              label: 'Live Feed',
               isActive: state.isVideoActive,
-              onTap: busy ? null : () => context.read<AppState>().toggleVideo(),
-            ),
-            const SizedBox(width: 8),
-            _IconToggle(
-              icon: Icons.camera_alt_outlined,
-              activeIcon: Icons.camera_alt,
-              label: 'Photo',
-              isActive: false,
-              onTap: busy ? null : () => context.read<AppState>().capturePhoto(),
+              flex: 2,
+              onTap: widget.busy ? null : () => context.read<AppState>().toggleVideo(),
             ),
             const SizedBox(width: 8),
             _IconToggle(
@@ -433,7 +481,7 @@ class _ActionRow extends StatelessWidget {
               activeIcon: Icons.edit_note,
               label: 'Note',
               isActive: false,
-              onTap: busy ? null : () => _showNoteSheet(context),
+              onTap: widget.busy ? null : () => _showNoteSheet(context),
             ),
           ],
         ),
@@ -500,6 +548,7 @@ class _IconToggle extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.flex = 1,
   });
 
   final IconData icon;
@@ -507,10 +556,12 @@ class _IconToggle extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback? onTap;
+  final int flex;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
+      flex: flex,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -614,208 +665,6 @@ class _NoteSheetState extends State<_NoteSheet> {
             },
             child: const Text('Add Finding'),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Component checklist card ──────────────────────────────────────────────
-
-class _ComponentChecklist extends StatelessWidget {
-  const _ComponentChecklist({required this.state, required this.report});
-  final AppState state;
-  final LiveReport report;
-
-  @override
-  Widget build(BuildContext context) {
-    final zone = state.activeZone;
-    if (zone == null) return const SizedBox.shrink();
-
-    final checkedCount =
-        zone.points.where((p) => report.checkedPoints.containsKey(p.id)).length;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(zone.displayName,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                Text('$checkedCount / ${zone.points.length}',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.outline)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            LinearProgressIndicator(
-              value: zone.points.isEmpty
-                  ? 0
-                  : checkedCount / zone.points.length,
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
-            ),
-            const Divider(height: 16),
-
-            ...zone.points.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final point = entry.value;
-              final check = report.checkedPoints[point.id];
-              final isCurrent = idx == state.currentPointIndex && check == null;
-
-              return _PointTile(
-                point: point,
-                check: check,
-                isCurrent: isCurrent,
-                onMark: isCurrent
-                    ? (severity) =>
-                        context.read<AppState>().markPointChecked(severity)
-                    : null,
-              );
-            }),
-
-            if (state.zones.length > 1) ...[
-              const Divider(height: 16),
-              SizedBox(
-                height: 32,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: state.zones.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 6),
-                  itemBuilder: (context, i) {
-                    final z = state.zones[i];
-                    final isActive = z.zoneId == report.currentZone;
-                    final zoneChecked = z.points
-                        .where((p) =>
-                            report.checkedPoints.containsKey(p.id))
-                        .length;
-                    final zoneDone = zoneChecked == z.points.length;
-                    return FilterChip(
-                      label: Text(
-                        '${z.displayName} ($zoneChecked/${z.points.length})',
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                      selected: isActive,
-                      showCheckmark: zoneDone,
-                      onSelected: (_) =>
-                          context.read<AppState>().setZone(z.zoneId),
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A single inspection point row with severity quick-action buttons.
-class _PointTile extends StatelessWidget {
-  const _PointTile({
-    required this.point,
-    required this.check,
-    required this.isCurrent,
-    this.onMark,
-  });
-  final InspectionPoint point;
-  final CheckResult? check;
-  final bool isCurrent;
-  final void Function(FindingSeverity)? onMark;
-
-  static const _severityData = {
-    FindingSeverity.ok: (icon: Icons.check_circle, color: Colors.green, label: 'OK'),
-    FindingSeverity.review:
-        (icon: Icons.warning_amber, color: Colors.orange, label: 'Review'),
-    FindingSeverity.critical:
-        (icon: Icons.error, color: Colors.red, label: 'Critical'),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    if (check != null) {
-      final data = _severityData[check!.severity]!;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Icon(data.icon, size: 18, color: data.color),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(point.displayName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.outline,
-                    decoration: TextDecoration.lineThrough,
-                  )),
-            ),
-            Text(data.label,
-                style: TextStyle(
-                    fontSize: 11,
-                    color: data.color,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Icon(
-            isCurrent ? Icons.arrow_right : Icons.radio_button_unchecked,
-            size: 18,
-            color: isCurrent
-                ? const Color(0xFFFFCD11)
-                : Theme.of(context).colorScheme.outline,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(point.displayName,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
-                )),
-          ),
-          if (isCurrent && onMark != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: FindingSeverity.values.map((s) {
-                final data = _severityData[s]!;
-                return Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => onMark!(s),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: data.color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(data.label,
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: data.color,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
         ],
       ),
     );

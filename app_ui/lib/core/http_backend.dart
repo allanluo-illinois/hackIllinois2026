@@ -3,15 +3,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart' show MediaType;
 
 import 'backend_port.dart';
 import 'models.dart';
 
-/// HTTP-based implementation of [BackendPort].
+/// HTTP-based implementation of [BackendPort] targeting the FastAPI backend.
 ///
-/// All communication uses JSON over HTTP — no WebSockets.
-/// Multipart uploads are used for file-bearing endpoints.
+/// Endpoints:
+///   POST /chat   — generator agent (inspection)
+///   POST /review — reviewer agent  (reports)
+///
+/// Frame uploads go to port 8001 (data_stream server) when available.
 class HttpBackend implements BackendPort {
   final String baseUrl;
   final http.Client _client;
@@ -20,7 +22,7 @@ class HttpBackend implements BackendPort {
   HttpBackend({
     required this.baseUrl,
     http.Client? client,
-    this.timeout = const Duration(seconds: 30),
+    this.timeout = const Duration(seconds: 60),
   }) : _client = client ?? http.Client();
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
@@ -30,34 +32,61 @@ class HttpBackend implements BackendPort {
         'Accept': 'application/json',
       };
 
+  /// Best-effort upload of an image frame to the data_stream server (port 8001)
+  /// so the vision tool can read it from disk.
+  Future<bool> _uploadFrame(String filePath) async {
+    try {
+      final uploadBase = baseUrl.replaceAll(RegExp(r':\d+$'), ':8001');
+      final request = http.MultipartRequest(
+          'POST', Uri.parse('$uploadBase/upload-frame'));
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      final streamed = await _client.send(request).timeout(
+          const Duration(seconds: 10));
+      final resp = await http.Response.fromStream(streamed);
+      return resp.statusCode >= 200 && resp.statusCode < 300;
+    } catch (e) {
+      debugPrint('Frame upload failed (data_stream may not be running): $e');
+      return false;
+    }
+  }
+
   // ── Session lifecycle ───────────────────────────────────────────────────
 
   @override
   Future<SessionStartResult> createSession(String machineId) async {
+    final sessionId = 'sess_${DateTime.now().millisecondsSinceEpoch}';
+
     final resp = await _client
         .post(
-          _uri('/api/session'),
+          _uri('/chat'),
           headers: _jsonHeaders,
-          body: jsonEncode({'machineId': machineId}),
+          body: jsonEncode({
+            'user_id': 'operator',
+            'session_id': sessionId,
+            'text':
+                'Starting pre-operation inspection for machine $machineId. '
+                'Guide me through the walk-around.',
+          }),
         )
         .timeout(timeout);
     _checkStatus(resp);
-    return SessionStartResult.fromJson(
-        jsonDecode(resp.body) as Map<String, dynamic>);
+
+    final json = jsonDecode(resp.body) as Map<String, dynamic>;
+    return SessionStartResult(
+      sessionId: json['session_id'] as String? ?? sessionId,
+      initialGuidance:
+          json['message'] as String? ?? 'Session started for $machineId.',
+      startingZone: 'front_slight_sides',
+      startingStep: 'Begin walk-around',
+    );
   }
 
   @override
   Future<void> endSession(String sessionId) async {
-    try {
-      await _client
-          .delete(_uri('/api/session/$sessionId'), headers: _jsonHeaders)
-          .timeout(timeout);
-    } catch (e) {
-      debugPrint('HttpBackend.endSession error: $e');
-    }
+    // FastAPI sessions are in-memory; no explicit teardown needed.
   }
 
-  // ── Inspect turn (multipart — supports text + files) ──────────────────
+  // ── Inspect turn ───────────────────────────────────────────────────────
 
   @override
   Future<InspectTurn> sendInspectTurn({
@@ -68,35 +97,51 @@ class HttpBackend implements BackendPort {
     String? imageFilePath,
     String? videoFilePath,
   }) async {
-    final request = http.MultipartRequest(
-        'POST', _uri('/api/session/$sessionId/turn'));
-    request.fields['zone_id'] = zoneId;
-    if (text != null) request.fields['text'] = text;
+    String messageText = text ?? '';
 
-    if (audioFilePath != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-          'audio', audioFilePath,
-          contentType: _parseMediaType('audio/mp4')));
-    }
     if (imageFilePath != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-          'image', imageFilePath,
-          contentType: _parseMediaType('image/jpeg')));
-    }
-    if (videoFilePath != null) {
-      request.files.add(await http.MultipartFile.fromPath(
-          'video', videoFilePath,
-          contentType: _parseMediaType('video/mp4')));
+      final uploaded = await _uploadFrame(imageFilePath);
+      if (messageText.isEmpty) {
+        messageText = uploaded
+            ? 'I just took a photo at zone $zoneId. '
+              'Please use your vision tool to analyze the current frame.'
+            : 'Photo taken at zone $zoneId.';
+      }
     }
 
-    final streamed = await _client.send(request).timeout(timeout);
-    final resp = await http.Response.fromStream(streamed);
+    if (videoFilePath != null && messageText.isEmpty) {
+      messageText = 'Video recorded at zone $zoneId.';
+    }
+
+    if (audioFilePath != null && messageText.isEmpty) {
+      messageText = 'Audio note recorded at zone $zoneId.';
+    }
+
+    if (messageText.isEmpty) {
+      messageText = 'Continuing inspection at zone $zoneId. What should I check next?';
+    }
+
+    final resp = await _client
+        .post(
+          _uri('/chat'),
+          headers: _jsonHeaders,
+          body: jsonEncode({
+            'user_id': 'operator',
+            'session_id': sessionId,
+            'text': messageText,
+          }),
+        )
+        .timeout(timeout);
     _checkStatus(resp);
-    return InspectTurn.fromJson(
-        jsonDecode(resp.body) as Map<String, dynamic>);
+
+    final json = jsonDecode(resp.body) as Map<String, dynamic>;
+    return InspectTurn(
+      source: AgentRole.orchestrator,
+      agentText: json['message'] as String? ?? '',
+    );
   }
 
-  // ── Media upload ──────────────────────────────────────────────────────
+  // ── Media upload ───────────────────────────────────────────────────────
 
   @override
   Future<MediaProcessResult> uploadMedia({
@@ -106,22 +151,17 @@ class HttpBackend implements BackendPort {
     required String mimeType,
     String? zoneId,
   }) async {
-    final request = http.MultipartRequest(
-        'POST', _uri('/api/session/$sessionId/media'));
-    request.fields['kind'] = kind.name;
-    if (zoneId != null) request.fields['zone_id'] = zoneId;
-    request.files.add(await http.MultipartFile.fromPath(
-        'file', filePath,
-        contentType: _parseMediaType(mimeType)));
+    if (kind == MediaKind.photo) {
+      await _uploadFrame(filePath);
+    }
 
-    final streamed = await _client.send(request).timeout(timeout);
-    final resp = await http.Response.fromStream(streamed);
-    _checkStatus(resp);
-    return MediaProcessResult.fromJson(
-        jsonDecode(resp.body) as Map<String, dynamic>);
+    return const MediaProcessResult(
+      status: MediaStatus.complete,
+      notes: 'Media received.',
+    );
   }
 
-  // ── Reports ─────────────────────────────────────────────────────────────
+  // ── Reports ────────────────────────────────────────────────────────────
 
   @override
   Future<ReportsQueryResult> queryReports({
@@ -129,20 +169,26 @@ class HttpBackend implements BackendPort {
     required String query,
     List<ChatMessage> history = const [],
   }) async {
+    final sessionId = 'review_$machineId';
+
     final resp = await _client
         .post(
-          _uri('/api/reports/query'),
+          _uri('/review'),
           headers: _jsonHeaders,
           body: jsonEncode({
-            'machineId': machineId,
-            'query': query,
-            'history': history.map((m) => m.toJson()).toList(),
+            'user_id': 'manager',
+            'session_id': sessionId,
+            'text': query,
           }),
         )
         .timeout(timeout);
     _checkStatus(resp);
-    return ReportsQueryResult.fromJson(
-        jsonDecode(resp.body) as Map<String, dynamic>);
+
+    final json = jsonDecode(resp.body) as Map<String, dynamic>;
+    return ReportsQueryResult(
+      results: const [],
+      assistantText: json['analysis'] as String? ?? '',
+    );
   }
 
   @override
@@ -152,22 +198,30 @@ class HttpBackend implements BackendPort {
   }) async {
     final resp = await _client
         .post(
-          _uri('/api/reports/$reportId/edit'),
+          _uri('/review'),
           headers: _jsonHeaders,
-          body: jsonEncode({'instruction': instruction}),
+          body: jsonEncode({
+            'user_id': 'manager',
+            'session_id': 'review_edit',
+            'text': 'Update report $reportId: $instruction',
+          }),
         )
         .timeout(timeout);
     _checkStatus(resp);
-    return ReportUpdateResult.fromJson(
-        jsonDecode(resp.body) as Map<String, dynamic>);
+
+    final json = jsonDecode(resp.body) as Map<String, dynamic>;
+    return ReportUpdateResult(
+      success: json['status'] == 'success',
+      assistantText: json['analysis'] as String? ?? '',
+    );
   }
 
-  // ── Cleanup ─────────────────────────────────────────────────────────────
+  // ── Cleanup ────────────────────────────────────────────────────────────
 
   @override
   void dispose() => _client.close();
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────
 
   void _checkStatus(http.Response resp) {
     if (resp.statusCode >= 200 && resp.statusCode < 300) return;
@@ -175,10 +229,5 @@ class HttpBackend implements BackendPort {
       'HTTP ${resp.statusCode}: ${resp.body}',
       uri: resp.request?.url,
     );
-  }
-
-  static MediaType _parseMediaType(String mime) {
-    final parts = mime.split('/');
-    return MediaType(parts[0], parts.length > 1 ? parts[1] : '*');
   }
 }

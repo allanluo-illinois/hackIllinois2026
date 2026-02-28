@@ -14,7 +14,7 @@ const _catCharcoal = Color(0xFF2C2C2C);
 const _catPaleYellow = Color(0xFFFFF3C4);
 
 // ── Backend config ──────────────────────────────────────────────────────
-const _defaultBackendUrl = 'http://localhost:8080';
+const _defaultBackendUrl = 'http://10.193.248.89:8000';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
