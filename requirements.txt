@@ -1,0 +1,4 @@
+google-adk
+firebase-admin
+python-dotenv
+google-genai
