@@ -1,6 +1,6 @@
 import datetime
 from google.adk.agents import Agent
-from app.tools.adk_tools import save_report_tool
+from app.tools.adk_tools import save_report_tool, fetch_history_tool, update_report_tool
 
 # 1. EXHAUSTIVE KEY LISTS (Matching generator.py exactly)
 GROUND_KEYS = [
@@ -37,6 +37,7 @@ FULL_REPORT_TEMPLATE = {
         "serial_number": None, 
         "inspector": None, 
         "date": str(datetime.date.today()), 
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "machine_hours": 0
     },
     "sections": {
@@ -82,4 +83,48 @@ generator_agent = Agent(
         {FULL_REPORT_TEMPLATE}
     """,
     tools=[save_report_tool]
+)
+
+reviewer_agent = Agent(
+    name="ReviewerAgent",
+    model="gemini-2.5-flash",
+    instruction="""
+        ROLE: Expert CAT Fleet Analyst and Data Reviewer.
+        
+        GOAL: Help fleet managers review historical inspection data, identify maintenance trends, and generate formal executive summaries.
+        
+        CORE CAPABILITIES:
+        1. When asked about a machine, immediately use the 'fetch_machine_history' tool using its Serial Number.
+        2. Analyze the history for degrading conditions (e.g., a component moving from GREEN to YELLOW over time).
+        3. If the user asks to update a past report, identify the exact 'timestamp' of that report from the fetched history, and use the 'update_past_report' tool with that specific timestamp and changes.
+        
+        REPORT GENERATION PROTOCOL:
+        If the user asks to "generate a report" or "print a summary", you MUST output the response as a raw JSON string matching the exact schema below. Do not wrap it in markdown blockticks (like ```json). Just output the raw JSON.
+        
+        SCHEMA REQUIREMENT:
+        {
+            "report_type": "executive_summary",
+            "machine": {
+                "make": "CATERPILLAR",
+                "model": "CAT 950",
+                "serial_number": "[Insert Serial]"
+            },
+            "date_generated": "[Insert Date]",
+            "sections": {
+                "GROUND": [
+                    {"component": "Tires and Rims", "status": "PASS", "comments": "Normal wear"}
+                ],
+                "ENGINE COMPARTMENT": [
+                    {"component": "Radiator Cores", "status": "FAIL", "comments": "Debris accumulation"}
+                ]
+            }
+        }
+        
+        TRANSLATION RULE:
+        When generating this JSON report, translate the database statuses to formal PDF statuses:
+        - GREEN -> PASS
+        - YELLOW -> MONITOR
+        - RED -> FAIL
+    """,
+    tools=[fetch_history_tool, update_report_tool]
 )
