@@ -7,16 +7,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 extractor = SuperPoint(max_num_keypoints=1024).eval().to(device)
 matcher = LightGlue(features='superpoint').eval().to(device)
 # on startup
-anchor_dict = {
-    "front_slight_sides": 'anchors/frame_0018.jpg', #front
-    "front_tire_left": 'anchors/frame_0033.jpg', #frontleft
-    "left_center_rear_tire_left_service_panel": 'anchors/frame_0047.jpg', #left
-    "left_center_rear_tire_left_service_panel": 'anchors/frame_0068.jpg', #backleft
-    "rear_of_machine": 'anchors/frame_0081.jpg', #back
-    "right_center_rear_tire_right": 'anchors/frame_0095.jpg', #backright
-    "right_center_rear_tire_right": 'anchors/frame_0105.jpg', #right
-    "front_tire_right": 'anchors/frame_0131.jpg', #frontright
-}
+# anchor_dict = {
+#     "front_slight_sides": 'anchors/frame_0018.jpg', #front
+#     "front_tire_left": 'anchors/frame_0033.jpg', #frontleft
+#     "left_center_rear_tire_left_service_panel": 'anchors/frame_0047.jpg', #left
+#     "left_center_rear_tire_left_service_panel": 'anchors/frame_0068.jpg', #backleft
+#     "rear_of_machine": 'anchors/frame_0081.jpg', #back
+#     "right_center_rear_tire_right": 'anchors/frame_0095.jpg', #backright
+#     "right_center_rear_tire_right": 'anchors/frame_0105.jpg', #right
+#     "front_tire_right": 'anchors/frame_0131.jpg', #frontright
+# }
 anchor_dict = {
     'anchors/frame_0018.jpg': "front_slight_sides", #front
     'anchors/frame_0033.jpg': "front_tire_left", #frontleft

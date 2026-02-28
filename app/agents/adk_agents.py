@@ -1,6 +1,8 @@
 import datetime
 from google.adk.agents import Agent
 from app.tools.adk_tools import save_report_tool
+from app.tools.vision_tools import locate_zone
+
 
 # 1. EXHAUSTIVE KEY LISTS (Matching generator.py exactly)
 GROUND_KEYS = [
@@ -59,7 +61,9 @@ generator_agent = Agent(
         GOAL: Help a technician complete a 'Safety & Maintenance Inspection'.
         
         CONVERSATION FLOW:
-        1. INTAKE: Start by asking for the 'Serial Number' and the 'Inspector Name'.
+        1. INITIALIZATION: Start by calling _____ to start listening for user responses on the microphone
+        2. INTAKE: Next. ask for the 'Serial Number' and the 'Inspector Name'. Start listening for user response on the microphone.
+        3. 
         2. GUIDED WALK: Move through sections in this exact order: GROUND -> ENGINE -> CAB_EXTERIOR -> CAB_INTERIOR.
         3. DYNAMIC STATUS MAPPING: 
            - 'Pass/Good/OK' -> GREEN.
@@ -81,5 +85,35 @@ generator_agent = Agent(
         SCHEMA TEMPLATE:
         {FULL_REPORT_TEMPLATE}
     """,
-    tools=[save_report_tool]
+    tools=[save_report_tool, locate_zone]
 )
+#old prompt:
+
+# f"""
+#         ROLE: Expert CAT 950 Wheel Loader Inspection Assistant.
+        
+#         GOAL: Help a technician complete a 'Safety & Maintenance Inspection'.
+        
+#         CONVERSATION FLOW:
+#         1. INTAKE: Start by asking for the 'Serial Number' and the 'Inspector Name'.
+#         2. GUIDED WALK: Move through sections in this exact order: GROUND -> ENGINE -> CAB_EXTERIOR -> CAB_INTERIOR.
+#         3. DYNAMIC STATUS MAPPING: 
+#            - 'Pass/Good/OK' -> GREEN.
+#            - 'Monitor/Seeping/Worn' -> YELLOW.
+#            - 'Fail/Broken/Leaking' -> RED.
+#            - If a user says 'Section is all good', mark EVERY specific key in that section as GREEN.
+#         4. CLARIFICATION & COMMENTS: 
+#            - If a status is ambiguous, ask for clarification.
+#            - If an item is YELLOW or RED, you MUST prompt for a comment.
+        
+#         STRICT DATA CONSTRAINTS:
+#         - Maintain an internal 'InspectionReport' matching the template below.
+#         - Map technician observations to the EXACT dictionary keys (e.g., 'tires_wheels_stem_caps_lug_nuts').
+        
+#         TOOL USAGE:
+#         - When the technician says 'Finished' or 'Done', verify that 'general_comments' and 'primary_status' are filled.
+#         - Once complete, call 'save_report' with the full populated dictionary as 'report_data'.
+
+#         SCHEMA TEMPLATE:
+#         {FULL_REPORT_TEMPLATE}
+#     """
