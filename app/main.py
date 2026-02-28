@@ -81,18 +81,18 @@ async def chat(request: ChatRequest):
 @app.post("/review")
 async def review(request: ChatRequest):
     # Ensure session exists in Reviewer memory
-    try:
-        reviewer_memory.get_session(
+    session = await reviewer_runner.session_service.get_session(
+        app_name="management_analytics",
+        user_id=request.user_id,
+        session_id=request.session_id,
+    )
+
+    if session is None:
+        print(f"📦 Creating session: {request.session_id}")
+        await reviewer_runner.session_service.create_session(
+            app_name="management_analytics",
             user_id=request.user_id,
             session_id=request.session_id,
-            app_name="management_analytics"
-        )
-    except Exception:
-        print(f"📋 Creating new Reviewer session: {request.session_id}")
-        reviewer_memory.create_session(
-            user_id=request.user_id,
-            session_id=request.session_id,
-            app_name="management_analytics"
         )
 
     new_message = types.Content(
