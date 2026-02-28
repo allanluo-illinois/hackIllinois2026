@@ -188,6 +188,13 @@ class _ActiveSessionState extends State<_ActiveSession> {
           _SessionHeader(report: report),
           const SizedBox(height: 10),
           _AgentCard(text: state.latestAgentText, busy: state.inspectBusy),
+          if (state.isAudioRecording || state.liveTranscript.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _LiveTranscriptCard(
+              text: state.liveTranscript,
+              isListening: state.isAudioRecording,
+            ),
+          ],
           const SizedBox(height: 10),
           _ActionRow(busy: state.inspectBusy),
           const SizedBox(height: 10),
@@ -687,6 +694,48 @@ class _MediaTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Live transcript card ───────────────────────────────────────────────────
+
+class _LiveTranscriptCard extends StatelessWidget {
+  const _LiveTranscriptCard({required this.text, required this.isListening});
+  final String text;
+  final bool isListening;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.grey.shade900,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            if (isListening)
+              const Padding(
+                padding: EdgeInsets.only(right: 10),
+                child: SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white70,
+                  ),
+                ),
+              ),
+            Expanded(
+              child: Text(
+                text.isEmpty ? 'Listening…' : text,
+                style: TextStyle(
+                  color: text.isEmpty ? Colors.white38 : Colors.white,
+                  fontSize: 14,
+                  fontStyle: text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

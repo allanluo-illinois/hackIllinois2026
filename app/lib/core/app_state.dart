@@ -1,5 +1,9 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'audio_capture.dart';
+import 'audio_pipeline.dart';
+import 'audio_transport.dart';
 import 'backend_port.dart';
 import 'models.dart';
 
@@ -61,6 +65,25 @@ class AppState extends ChangeNotifier {
   /// True while the microphone is open / inspector is talking.
   bool isAudioRecording = false;
 
+  /// Live partial transcript updated in real time while recording.
+  String liveTranscript = '';
+
+  /// Current microphone RMS level in dB (0 = full scale, -160 = silence).
+  double audioLevelDb = -160.0;
+
+  /// Threshold below which audio is considered too quiet (likely muted/blocked).
+  static const double silenceThresholdDb = -50.0;
+
+  /// True when mic level is below the silence threshold.
+  bool get isAudioTooQuiet =>
+      isAudioRecording && audioLevelDb < silenceThresholdDb;
+
+  late final _pipeline = AudioPipeline(
+    source: AvFoundationAudioSource(),
+    transport: MockAudioTransport(),
+  );
+  StreamSubscription? _eventSub;
+
   Future<void> capturePhoto() => _captureMedia(MediaKind.photo);
 
   /// Toggles the live video feed. No clip is created; the feed is continuous.
@@ -73,20 +96,65 @@ class AppState extends ChangeNotifier {
   /// accumulated audio is sent to the agent as a voice turn.
   Future<void> toggleAudio() async {
     if (isAudioRecording) {
+      await _pipeline.stop();
       isAudioRecording = false;
+      liveTranscript = '';
+      audioLevelDb = -160.0;
       notifyListeners();
-      // Simulate STT: send transcript to agent and get spoken guidance back.
-      await sendInspectText('[Voice] Checked current component — looks good.');
     } else {
+      liveTranscript = '';
+      _eventSub?.cancel();
+      _eventSub = _pipeline.events.listen(_onPipelineEvent);
+      final sessionId = liveReport?.sessionId ?? 'unknown';
+      await _pipeline.start(sessionId);
       isAudioRecording = true;
       notifyListeners();
+    }
+  }
+
+  void _onPipelineEvent(BackendEvent event) {
+    switch (event) {
+      case AudioLevel(:final rmsDb):
+        audioLevelDb = rmsDb;
+        debugPrint('🎚️ level: ${rmsDb.toStringAsFixed(1)} dB${rmsDb < silenceThresholdDb ? " [TOO QUIET]" : ""}');
+        notifyListeners();
+      case AsrPartial(:final text):
+        liveTranscript = text;
+        notifyListeners();
+      case AsrFinal(:final text):
+        liveTranscript = text;
+        latestAgentText = '';
+        notifyListeners();
+      case AgentReply(:final text):
+        latestAgentText = text;
+        notifyListeners();
+      case ReportPatch(:final finding):
+        final report = liveReport;
+        if (report != null) {
+          report.findings.add(Finding(
+            id: finding['id'] as String,
+            severity: FindingSeverity.values.byName(finding['severity'] as String),
+            title: finding['title'] as String,
+            detail: finding['detail'] as String,
+            timestamp: DateTime.now(),
+          ));
+        }
+        liveTranscript = '';
+        notifyListeners();
     }
   }
 
   void endSession() {
     liveReport = null;
     isVideoRecording = false;
+    if (isAudioRecording) {
+      _pipeline.stop();
+    }
+    _eventSub?.cancel();
+    _eventSub = null;
     isAudioRecording = false;
+    liveTranscript = '';
+    audioLevelDb = -160.0;
     latestAgentText = '';
     pendingAction = RequestedAction.none;
     chatMessages = [];

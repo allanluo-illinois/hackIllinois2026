@@ -152,6 +152,38 @@ class ReportUpdateResult {
   const ReportUpdateResult({required this.success, required this.assistantText});
 }
 
+// ── Backend events (audio pipeline) ────────────────────────────────────────
+
+sealed class BackendEvent {
+  const BackendEvent();
+}
+
+class AsrPartial extends BackendEvent {
+  final String text;
+  const AsrPartial(this.text);
+}
+
+class AsrFinal extends BackendEvent {
+  final String text;
+  const AsrFinal(this.text);
+}
+
+class AgentReply extends BackendEvent {
+  final String text;
+  const AgentReply(this.text);
+}
+
+class ReportPatch extends BackendEvent {
+  final Map<String, dynamic> finding;
+  const ReportPatch(this.finding);
+}
+
+class AudioLevel extends BackendEvent {
+  /// RMS level in decibels (0 dB = full scale, -160 dB = silence).
+  final double rmsDb;
+  const AudioLevel(this.rmsDb);
+}
+
 // ── Chat ───────────────────────────────────────────────────────────────────
 
 enum ChatRole { user, assistant }
