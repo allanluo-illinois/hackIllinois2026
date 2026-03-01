@@ -1,0 +1,38 @@
+{
+  "name": "speech_to_text",
+  "version": "7.2.0",
+  "summary": "Exposes iOS and macOS speech recognition capabilities to Flutter.",
+  "description": "A Flutter plugin module for iOS and macOS that uses native speech recognition.",
+  "homepage": "https://github.com/csdcorp/speech_to_text",
+  "license": {
+    "file": "../LICENSE"
+  },
+  "authors": {
+    "Corner Software Development": "info@csdcorp.com"
+  },
+  "source": {
+    "path": "."
+  },
+  "source_files": "speech_to_text/Sources/speech_to_text/**/*.swift",
+  "ios": {
+    "dependencies": {
+      "Flutter": [],
+      "CwlCatchException": []
+    }
+  },
+  "osx": {
+    "dependencies": {
+      "FlutterMacOS": [],
+      "CwlCatchException": []
+    }
+  },
+  "platforms": {
+    "ios": "13.0",
+    "osx": "11.00"
+  },
+  "pod_target_xcconfig": {
+    "DEFINES_MODULE": "YES"
+  },
+  "swift_versions": "5.0",
+  "swift_version": "5.0"
+}

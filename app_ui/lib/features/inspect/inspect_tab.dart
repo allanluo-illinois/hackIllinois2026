@@ -286,24 +286,11 @@ class _SessionHeader extends StatelessWidget {
             const Icon(Icons.directions_car_outlined, size: 28),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(report.machineId,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  Text(report.currentZone,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            Chip(
-              label: const Text('Active'),
-              avatar: const Icon(Icons.circle, size: 10, color: Colors.green),
-              backgroundColor:
-                  Colors.green.withValues(alpha: 0.1),
+              child: Text(report.machineId,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
