@@ -2,7 +2,10 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.adk.tools import FunctionTool
-from app.tools.firebase_ops import save_inspection_report, get_reports_by_serial, update_inspection_in_db
+from tools.firebase_ops import save_inspection_report, get_reports_by_serial, update_inspection_in_db
+import datetime
+import copy
+
 
 # 1. Initialize Firestore
 if not firebase_admin._apps:
@@ -12,7 +15,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 # 2. Define Wrapper Functions (ADK uses these for Name & Description)
-def save_report(report_data: dict) -> dict:
+def submit_final_completed_inspection(report_data: dict) -> dict:
     """Saves the final validated inspection report to Firestore."""
     return save_inspection_report(db, report_data)
 
@@ -34,6 +37,6 @@ def update_past_report(serial_number: str, timestamp: str, updates: dict) -> dic
 
 
 # 3. Initialize Tools (No 'name' or 'description' arguments needed)
-save_report_tool = FunctionTool(func=save_report)
+submit_final_completed_inspection_tool = FunctionTool(func=submit_final_completed_inspection)
 fetch_history_tool = FunctionTool(func=fetch_machine_history)
 update_report_tool = FunctionTool(func=update_past_report)

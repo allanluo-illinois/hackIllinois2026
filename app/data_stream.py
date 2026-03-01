@@ -5,7 +5,7 @@ import shutil
 import os
 # 1. Define the tiny Upload Server
 upload_api = FastAPI()
-UPLOAD_PATH = "app/data/stream/current_frame.jpg"
+UPLOAD_PATH = "data/stream/current_frame.jpg"
 
 @upload_api.post("/upload-frame")
 async def upload_frame(file: UploadFile = File(...)):

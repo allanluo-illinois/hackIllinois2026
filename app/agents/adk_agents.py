@@ -1,7 +1,9 @@
 import datetime
 from google.adk.agents import Agent
-from app.tools.adk_tools import save_report_tool, fetch_history_tool, update_report_tool
-from app.tools.vision_tools import locate_zone
+
+from tools.adk_tools import save_report_tool, fetch_history_tool, update_report_tool
+from tools.vision_tools import locate_zone
+
 # 1. EXHAUSTIVE KEY LISTS (Matching generator.py exactly)
 GROUND_KEYS = [
     "tires_wheels_stem_caps_lug_nuts", "bucket_cutting_edge_moldboard", 
@@ -60,12 +62,13 @@ generator_agent = Agent(
         GOAL: Help a technician complete a 'Safety & Maintenance Inspection' using a highly natural, conversational flow.
 
         OUTPUT CONSTRAINTS (STRICT):
+        - Always keep responses terse and within 20 words, validate data without repeating the entire validated data back.
         - NO BULLET POINTS. NO CHECKLISTS. NO NUMBERED LISTS.
         - Speak in brief, natural sentences like a coworker taking notes. 
         - Never speak the exact dictionary keys to the user (e.g., ask about "the tires" instead of "tires_wheels_stem_caps_lug_nuts").
 
         CONVERSATION FLOW:
-        1. INTAKE: Start by naturally asking for the Serial Number and Inspector Name.
+        1. INTAKE: Start by naturally asking for the Serial Number and Inspector Name. Once you have both, explicitly hand control over to the technician. Say something short and close to: "Got it. Proceed or ask to be guided." Do NOT ask about specific parts yet.
         2. FOLLOW THE TECHNICIAN: Allow the technician to report items in any order. Acknowledge their input quickly and naturally (e.g., "Got it, tires are good. What's next?").
         3. BULK APPROVALS: If the technician says "The whole Ground section is good" or "Cab is all OK", immediately mark all items in that specific section as GREEN and conversationally confirm it.
         4. GENTLE GUIDANCE: If the technician pauses, asks what's next, or loses their place, guide them to the nearest un-checked item in the GROUND, ENGINE, CAB_EXTERIOR, or CAB_INTERIOR sections.
@@ -79,14 +82,23 @@ generator_agent = Agent(
 
         STRICT DATA CONSTRAINTS:
         - Maintain an internal 'InspectionReport' matching the template below.
-        - Map technician observations to the EXACT dictionary keys.
-        - When calling 'save_report', you MUST ensure 'primary_status' and 'general_comments' are placed at the absolute root level of the dictionary, not inside 'header' or 'sections'.
+        - DO NOT invent, rename, or add any dictionary keys. 
+        - If the technician mentions a part that does not perfectly match a key, map it to the closest existing key or 'overall_machine' / 'overall_cab_interior'.
+        - When calling 'submit_final_completed_inspection_tool', you MUST ensure 'primary_status' and 'general_comments' are placed at the absolute root level of the dictionary, not inside 'header' or 'sections'.
         - The 'primary_status' value MUST be explicitly formatted as exactly 'GREEN', 'YELLOW', or 'RED'.
+
+        TOOL EXECUTION RULES (CRITICAL):
+        - NEVER call `submit_final_completed_inspection` to "save progress". 
+        - DO NOT call `submit_final_completed_inspection` until the technician indicates they are "Finished" or "Done" AND you have verified that all required fields are filled.
         
+        ERROR HANDLING (CRITICAL):
+        - If the 'submit_final_completed_inspection' tool returns an error (success: false), you MUST read the exact error message.
+        - If the error is about your JSON structure (e.g., 'primary_status' is missing from the root level), silently fix your payload format and call the tool again immediately.
+        - If the error states that you need to ask the technician for missing information, DO NOT retry the tool. Apologize to the technician, ask them for the specific missing information, wait for their reply, and THEN call the tool again.
         SCHEMA TEMPLATE:
-        [Insert FULL_REPORT_TEMPLATE here]
+        {FULL_REPORT_TEMPLATE}
     """,
-    tools=[save_report_tool, locate_zone]
+    tools=[submit_final_completed_inspection_tool, locate_zone]
 )
 
 reviewer_agent = Agent(
