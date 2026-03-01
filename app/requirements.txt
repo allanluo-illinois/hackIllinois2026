@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+google-adk
+google-genai
+firebase-admin
+torch
+lightglue @ git+https://github.com/cvg/LightGlue.git
+librosa
+scikit-learn
+numpy
+python-multipart

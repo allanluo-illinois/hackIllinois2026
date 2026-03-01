@@ -6,6 +6,7 @@ from app.tools.firebase_ops import save_inspection_report, get_reports_by_serial
 import datetime
 import copy
 
+
 # 1. Initialize Firestore
 if not firebase_admin._apps:
     cred = credentials.Certificate(os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "service-account.json"))

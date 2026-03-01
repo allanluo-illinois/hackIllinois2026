@@ -15,7 +15,7 @@ UPLOAD_PATH = "app/data/stream/current_frame.jpg"
 # map GOOGLE_API_KEY → GEMINI_API_KEY
 os.environ["GEMINI_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
 # Import your agents
-from app.agents.adk_agents import generator_agent, reviewer_agent
+from agents.adk_agents import generator_agent, reviewer_agent
 
 app = FastAPI(title="ADK Inspection API")
 
@@ -94,14 +94,12 @@ async def chat(request: ChatRequest):
     )
 
     # Run the Generator Agent
-    events = generator_runner.run(
+    final_response = "I'm sorry, I couldn't process that."
+    async for event in generator_runner.run_async(
         user_id=request.user_id,
         session_id=request.session_id,
-        new_message=new_message
-    )
-
-    final_response = "I'm sorry, I couldn't process that."
-    for event in events:
+        new_message=new_message,
+    ):
         if event.is_final_response():
             final_response = event.content.parts[0].text
 
@@ -134,14 +132,12 @@ async def review(request: ChatRequest):
     )
 
     # Run the Reviewer Agent
-    events = reviewer_runner.run(
+    final_analysis = "The reviewer was unable to complete the analysis."
+    async for event in reviewer_runner.run_async(
         user_id=request.user_id,
         session_id=request.session_id,
-        new_message=new_message
-    )
-
-    final_analysis = "The reviewer was unable to complete the analysis."
-    for event in events:
+        new_message=new_message,
+    ):
         if event.is_final_response():
             final_analysis = event.content.parts[0].text
 
