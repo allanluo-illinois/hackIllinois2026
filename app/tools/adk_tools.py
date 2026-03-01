@@ -2,7 +2,7 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.adk.tools import FunctionTool
-from app.tools.firebase_ops import save_inspection_report, get_reports_by_serial, update_inspection_in_db
+from tools.firebase_ops import save_inspection_report, get_reports_by_serial, update_inspection_in_db
 import datetime
 import copy
 
