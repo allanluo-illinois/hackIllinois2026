@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'backend_port.dart';
 import 'models.dart';
@@ -238,6 +240,14 @@ class MockBackend implements BackendPort {
       assistantText:
           'Report $reportId updated: "$instruction". Changes saved successfully.',
     );
+  }
+
+  // ── Download ───────────────────────────────────────────────────────────
+
+  @override
+  Future<Uint8List> downloadReport({required Map<String, dynamic> payload}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return Uint8List.fromList(utf8.encode(jsonEncode(payload)));
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────────

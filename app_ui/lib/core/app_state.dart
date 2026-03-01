@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'audio_capture.dart';
 import 'backend_port.dart';
 import 'http_backend.dart';
@@ -424,6 +427,34 @@ class AppState extends ChangeNotifier {
   String latestAssistantResponse = '';
   bool reportsBusy = false;
 
+  /// Pre-populated report list shown in the upper section of the Reports tab.
+  List<ReportSummary> availableReports = [];
+
+  void loadAvailableReports() {
+    final now = DateTime.now();
+    availableReports = [
+      ReportSummary(
+        reportId: 'RPT-2025-0472-A',
+        date: now.subtract(const Duration(days: 1)),
+        machineId: 'CAT 950GC',
+        summaryLine: 'Pre-op passed. Minor hose wear flagged for review.',
+      ),
+      ReportSummary(
+        reportId: 'RPT-2025-0471-B',
+        date: now.subtract(const Duration(days: 7)),
+        machineId: 'CAT 966M',
+        summaryLine: 'Critical: hydraulic leak detected on rear axle seal.',
+      ),
+      ReportSummary(
+        reportId: 'RPT-2025-0470-C',
+        date: now.subtract(const Duration(days: 14)),
+        machineId: 'CAT 982M',
+        summaryLine: 'Routine inspection. All components within spec.',
+      ),
+    ];
+    notifyListeners();
+  }
+
   Future<void> runReportsQuery(String query) async {
     final machineId = liveReport?.machineId ?? '7777';
     _addChat(ChatRole.user, query);
@@ -466,6 +497,26 @@ class AppState extends ChangeNotifier {
       debugPrint('Report edit error: $e');
       latestAssistantResponse = 'Failed to update report. Please try again.';
       _addChat(ChatRole.assistant, latestAssistantResponse);
+    }
+
+    reportsBusy = false;
+    notifyListeners();
+  }
+
+  Future<void> downloadReport(Map<String, dynamic> payload) async {
+    reportsBusy = true;
+    notifyListeners();
+
+    try {
+      final bytes = await backend.downloadReport(payload: payload);
+      final dir = await getTemporaryDirectory();
+      final serial = payload['machine']?['serial_number'] ?? 'unknown';
+      final file = File('${dir.path}/inspection_$serial.pdf');
+      await file.writeAsBytes(bytes);
+      await Share.shareXFiles([XFile(file.path)]);
+    } catch (e) {
+      debugPrint('Report download error: $e');
+      lastError = 'Failed to download report.';
     }
 
     reportsBusy = false;
