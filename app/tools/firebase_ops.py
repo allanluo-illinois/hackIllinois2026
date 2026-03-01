@@ -28,7 +28,7 @@ CAB_INTERIOR_KEYS = [
 ]
 
 def get_empty_section(keys):
-    return {key: {"status": "GREEN", "comments": ""} for key in keys}
+    return {key: {"status": "YELLOW", "comments": "DID NOT RECORD"} for key in keys}
 
 def get_fresh_template():
     """Generates a fresh template with the current exact timestamp."""
@@ -47,7 +47,7 @@ def get_fresh_template():
             "CAB_INTERIOR": get_empty_section(CAB_INTERIOR_KEYS)
         },
         "general_comments": "",
-        "primary_status": "GREEN"
+        "primary_status": None
     }
 
 #Data Validation Schema Mask
@@ -84,23 +84,16 @@ def save_inspection_report(db, report_data: dict) -> dict:
         # 3. Perform our final safety check on the sanitized data
         if not clean_report.get("primary_status"):
             return {"success": False, "error": "Missing primary_status"}
-        
+        if clean_report.get("general_comments") is None:
+            return {"success": False, "error": "Missing general_comments. You must ask the technician for final comments."}
+            
+        if not clean_report["header"].get("serial_number"):
+            return {"success": False, "error": "Missing serial_number in header."}
         # 4. Save the guaranteed-clean data to Firestore
         doc_ref = db.collection('inspection_reports').document()
         doc_ref.set(clean_report)
         return {"success": True, "report_id": doc_ref.id}
         
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-def save_inspection_report(db, report_data):
-    """Saves a validated report to Firestore."""
-    try:
-        if not report_data.get("primary_status"):
-            return {"success": False, "error": "Missing primary_status"}
-        
-        doc_ref = db.collection('inspection_reports').document()
-        doc_ref.set(report_data)
-        return {"success": True, "report_id": doc_ref.id}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
