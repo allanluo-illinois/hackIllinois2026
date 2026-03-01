@@ -116,6 +116,9 @@ class TtsService {
     }
 
     if (isSpeaking) {
+      // #region agent log
+      debugPrint('[DBG:TTS_QUEUE] queuing (already speaking), pending="${text.length > 40 ? text.substring(0, 40) : text}"');
+      // #endregion
       _pending = text;
       return;
     }

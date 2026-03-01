@@ -25,7 +25,7 @@ class _Landing extends StatefulWidget {
 }
 
 class _LandingState extends State<_Landing> {
-  final _machineCtrl = TextEditingController(text: 'WL-0472');
+  final _machineCtrl = TextEditingController(text: '7777');
   late final TextEditingController _urlCtrl;
   bool _showServer = false;
 

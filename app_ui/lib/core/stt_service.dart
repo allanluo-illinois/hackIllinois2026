@@ -22,6 +22,7 @@ class SttService {
 
   /// True while TTS is speaking — suppresses auto-restart.
   bool _pausedForTts = false;
+  bool get pausedForTts => _pausedForTts;
 
   /// Fired when an utterance is finalised (silence detected).
   void Function(String transcript)? onFinalTranscript;
@@ -55,6 +56,9 @@ class SttService {
   /// Kick off a single recognition session. Can be called repeatedly
   /// between utterances without touching [isListening].
   Future<void> _beginSession() async {
+    // #region agent log
+    debugPrint('[DBG:STT_BEGIN] sttActive=${_stt.isListening} paused=$_pausedForTts');
+    // #endregion
     if (_stt.isListening) return;
 
     partialTranscript = '';
@@ -93,9 +97,15 @@ class SttService {
   /// Schedule a restart after the recognizer stops, debounced so
   /// simultaneous calls from onResult + onStatus don't race.
   void _scheduleRestart() {
+    // #region agent log
+    debugPrint('[DBG:RESTART_REQ] pending=$_pendingRestart listening=$isListening paused=$_pausedForTts');
+    // #endregion
     if (_pendingRestart || !isListening || _pausedForTts) return;
     _pendingRestart = true;
     Future.delayed(const Duration(milliseconds: 400), () {
+      // #region agent log
+      debugPrint('[DBG:RESTART_FIRE] listening=$isListening paused=$_pausedForTts sttActive=${_stt.isListening}');
+      // #endregion
       _pendingRestart = false;
       if (isListening) {
         debugPrint('🎤 Auto-restarting listen session');
@@ -114,6 +124,9 @@ class SttService {
   /// Temporarily stop the recognition session while TTS is playing,
   /// but keep [isListening] true so we know to resume afterwards.
   Future<void> pauseForTts() async {
+    // #region agent log
+    debugPrint('[DBG:PAUSE_TTS] listening=$isListening sttActive=${_stt.isListening}');
+    // #endregion
     if (!isListening) return;
     _pausedForTts = true;
     _pendingRestart = false;
@@ -126,6 +139,9 @@ class SttService {
   /// Restart listening after TTS finishes.
   Future<void> resumeAfterTts() async {
     _pausedForTts = false;
+    // #region agent log
+    debugPrint('[DBG:RESUME_TTS] listening=$isListening sttActive=${_stt.isListening}');
+    // #endregion
     if (!isListening) return;
     debugPrint('🎤 Resuming after TTS');
     await _beginSession();

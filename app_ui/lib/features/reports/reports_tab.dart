@@ -45,7 +45,8 @@ class _ReportsTabState extends State<ReportsTab> {
       body: Column(
         children: [
           // ── 1. Query Results ─────────────────────────────────────────────
-          _QueryResultsRow(results: state.reportsQueryResults),
+          if (state.reportsQueryResults.isNotEmpty)
+            _QueryResultsRow(results: state.reportsQueryResults),
 
           // ── 2. Chat history ──────────────────────────────────────────────
           Expanded(

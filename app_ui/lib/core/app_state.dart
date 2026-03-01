@@ -38,10 +38,13 @@ class AppState extends ChangeNotifier {
   }
 
   void _onTtsStateChanged() {
+    // #region agent log
+    debugPrint('[DBG:TTS_STATE] isSpeaking=${tts.isSpeaking} sttListening=${stt.isListening} sttPaused=${stt.pausedForTts}');
+    // #endregion
     notifyListeners();
     if (tts.isSpeaking) {
       stt.pauseForTts();
-    } else if (stt.isListening) {
+    } else if (stt.isListening && stt.pausedForTts) {
       stt.resumeAfterTts();
     }
   }
@@ -50,6 +53,9 @@ class AppState extends ChangeNotifier {
   /// Drops it if the agent is busy or TTS is speaking (avoids
   /// feedback loops where the mic picks up TTS output).
   void _onSttTranscript(String transcript) {
+    // #region agent log
+    debugPrint('[DBG:STT_TRANSCRIPT] text="$transcript" busy=$inspectBusy tts=${tts.isSpeaking} report=${liveReport != null}');
+    // #endregion
     if (inspectBusy || tts.isSpeaking) {
       debugPrint('🎤 Dropping transcript — busy=$inspectBusy tts=${tts.isSpeaking}');
       return;
@@ -178,6 +184,9 @@ class AppState extends ChangeNotifier {
     final report = liveReport;
     if (report == null || text.trim().isEmpty) return;
 
+    // #region agent log
+    debugPrint('[DBG:SEND] text="${text.trim()}" session=${report.sessionId}');
+    // #endregion
     inspectBusy = true;
     notifyListeners();
 
@@ -187,6 +196,9 @@ class AppState extends ChangeNotifier {
         zoneId: report.currentZone,
         text: text.trim(),
       );
+      // #region agent log
+      debugPrint('[DBG:RECV] agentText="${turn.agentText.length > 80 ? turn.agentText.substring(0, 80) : turn.agentText}" action=${turn.requestedAction}');
+      // #endregion
       _applyTurn(turn, report);
 
       if (turn.requestedAction == RequestedAction.capturePhoto &&
@@ -198,6 +210,9 @@ class AppState extends ChangeNotifier {
         return;
       }
     } catch (e) {
+      // #region agent log
+      debugPrint('[DBG:SEND_ERR] $e');
+      // #endregion
       debugPrint('Text turn error: $e');
       lastError = 'Failed to send message. Check connection and try again.';
     }
@@ -409,7 +424,7 @@ class AppState extends ChangeNotifier {
   bool reportsBusy = false;
 
   Future<void> runReportsQuery(String query) async {
-    final machineId = liveReport?.machineId ?? 'WL-0472';
+    final machineId = liveReport?.machineId ?? '7777';
     _addChat(ChatRole.user, query);
     reportsBusy = true;
     notifyListeners();
