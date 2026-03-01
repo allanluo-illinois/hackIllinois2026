@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'audio_capture.dart';
 import 'backend_port.dart';
 import 'http_backend.dart';
+import 'live_camera_handle.dart';
 import 'media_service.dart';
 import 'models.dart';
+import 'stt_service.dart';
 import 'tts_service.dart';
 
 class AppState extends ChangeNotifier {
@@ -12,6 +14,8 @@ class AppState extends ChangeNotifier {
   final AudioRecorder recorder;
   final MediaService mediaService;
   final TtsService tts;
+  final LiveCameraHandle cameraHandle;
+  final SttService stt;
 
   String _backendUrl;
   String get backendUrl => _backendUrl;
@@ -24,9 +28,34 @@ class AppState extends ChangeNotifier {
     required this.recorder,
     required this.mediaService,
     required this.tts,
+    required this.cameraHandle,
+    required this.stt,
     String backendUrl = 'http://localhost:8000',
   }) : _backendUrl = backendUrl {
-    tts.onStateChanged = () => notifyListeners();
+    tts.onStateChanged = _onTtsStateChanged;
+    stt.onStateChanged = () => notifyListeners();
+    stt.onFinalTranscript = _onSttTranscript;
+  }
+
+  void _onTtsStateChanged() {
+    notifyListeners();
+    if (tts.isSpeaking) {
+      stt.pauseForTts();
+    } else if (stt.isListening) {
+      stt.resumeAfterTts();
+    }
+  }
+
+  /// Called when the on-device STT produces a final transcript.
+  /// Drops it if the agent is busy or TTS is speaking (avoids
+  /// feedback loops where the mic picks up TTS output).
+  void _onSttTranscript(String transcript) {
+    if (inspectBusy || tts.isSpeaking) {
+      debugPrint('🎤 Dropping transcript — busy=$inspectBusy tts=${tts.isSpeaking}');
+      return;
+    }
+    if (liveReport == null) return;
+    sendTextTurn(transcript);
   }
 
   void clearError() {
@@ -75,6 +104,9 @@ class AppState extends ChangeNotifier {
       isVideoActive = true;
 
       tts.speak(latestAgentText);
+
+      // Begin continuous on-device STT so the operator can talk hands-free.
+      stt.startListening();
     } catch (e) {
       debugPrint('Session start error: $e');
       lastError = 'Could not start session. Check server URL and try again.';
@@ -101,6 +133,45 @@ class AppState extends ChangeNotifier {
     tts.speak(latestAgentText);
   }
 
+  /// Automatically grab a frame from the live camera feed, upload it to the
+  /// data_stream server, and send a follow-up inspect turn so the agent can
+  /// run vision analysis. Called when the backend returns [capturePhoto].
+  Future<void> _autoCaptureLiveFeed() async {
+    final report = liveReport;
+    if (report == null) return;
+    if (!cameraHandle.isReady) {
+      debugPrint('📷 Auto-capture skipped — camera not ready');
+      return;
+    }
+
+    debugPrint('📷 Auto-capturing frame from live feed');
+    inspectBusy = true;
+    notifyListeners();
+
+    try {
+      final framePath = await cameraHandle.captureFrame();
+      if (framePath == null) {
+        debugPrint('📷 Auto-capture returned null');
+        inspectBusy = false;
+        notifyListeners();
+        return;
+      }
+
+      final turn = await backend.sendInspectTurn(
+        sessionId: report.sessionId,
+        zoneId: report.currentZone,
+        imageFilePath: framePath,
+      );
+      _applyTurn(turn, report);
+    } catch (e) {
+      debugPrint('📷 Auto-capture error: $e');
+      lastError = 'Failed to send captured frame. Check connection.';
+    }
+
+    inspectBusy = false;
+    notifyListeners();
+  }
+
   // ── Text turn (type → send → response) ────────────────────────────────
 
   Future<void> sendTextTurn(String text) async {
@@ -117,6 +188,15 @@ class AppState extends ChangeNotifier {
         text: text.trim(),
       );
       _applyTurn(turn, report);
+
+      if (turn.requestedAction == RequestedAction.capturePhoto &&
+          isVideoActive) {
+        inspectBusy = false;
+        notifyListeners();
+        pendingAction = RequestedAction.none;
+        await _autoCaptureLiveFeed();
+        return;
+      }
     } catch (e) {
       debugPrint('Text turn error: $e');
       lastError = 'Failed to send message. Check connection and try again.';
@@ -126,7 +206,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Audio recording (record → upload → response) ─────────────────────
+  // ── Live STT listening toggle ────────────────────────────────────────
+
+  Future<void> toggleListening() async {
+    if (stt.isListening) {
+      await stt.stopListening();
+    } else {
+      await stt.startListening();
+    }
+    notifyListeners();
+  }
+
+  // ── Audio recording (legacy push-to-talk fallback) ─────────────────
 
   bool isAudioRecording = false;
 
@@ -162,6 +253,15 @@ class AppState extends ChangeNotifier {
         }
 
         _applyTurn(turn, report);
+
+        if (turn.requestedAction == RequestedAction.capturePhoto &&
+            isVideoActive) {
+          inspectBusy = false;
+          notifyListeners();
+          pendingAction = RequestedAction.none;
+          await _autoCaptureLiveFeed();
+          return;
+        }
       } catch (e) {
         debugPrint('🎙️ Audio upload error: $e');
         lastError = 'Failed to send audio. Check connection and try again.';
@@ -276,6 +376,8 @@ class AppState extends ChangeNotifier {
 
   void endSession() {
     tts.stop();
+    stt.stopListening();
+
     final sessionId = liveReport?.sessionId;
     liveReport = null;
 

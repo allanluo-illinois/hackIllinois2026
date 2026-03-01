@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
@@ -262,9 +261,9 @@ class _ActiveSessionState extends State<_ActiveSession> {
           CameraPreviewCard(
             isActive: state.isVideoActive,
             onSnapPhoto: () => context.read<AppState>().capturePhoto(),
+            cameraHandle: state.cameraHandle,
           ),
           if (state.isVideoActive) const SizedBox(height: 10),
-          _LiveReportCard(report: report),
         ],
       ),
     );
@@ -373,14 +372,19 @@ class _AgentCard extends StatelessWidget {
             else
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: (Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14) *
-                      1.4 * 2,
+                  maxHeight: (Theme.of(context).textTheme.bodyMedium?.fontSize ?? 14) *
+                      1.5 * 4,
                 ),
-                child: Text(
-                  text.isEmpty ? 'Waiting for guidance…' : text,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Scrollbar(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Text(
+                        text.isEmpty ? 'Waiting for guidance…' : text,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -460,9 +464,10 @@ class _ActionRowState extends State<_ActionRow> {
         ),
         const SizedBox(height: 8),
         _TalkButton(
-          isListening: state.isAudioRecording,
+          isListening: state.stt.isListening,
           busy: widget.busy,
-          onToggle: () => context.read<AppState>().toggleAudio(),
+          partialTranscript: state.stt.partialTranscript,
+          onToggle: () => context.read<AppState>().toggleListening(),
         ),
         const SizedBox(height: 8),
         Row(
@@ -498,44 +503,68 @@ class _ActionRowState extends State<_ActionRow> {
   }
 }
 
-/// Large primary Talk button — record audio, then upload on release.
+/// Large primary button — toggles continuous on-device speech recognition.
+/// Shows partial transcript while the user is speaking.
 class _TalkButton extends StatelessWidget {
   const _TalkButton({
     required this.isListening,
     required this.busy,
+    required this.partialTranscript,
     required this.onToggle,
   });
 
   final bool isListening;
   final bool busy;
+  final String partialTranscript;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      style: FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        backgroundColor:
-            isListening ? Colors.red : const Color(0xFFFFCD11),
-        foregroundColor: isListening ? Colors.white : Colors.black,
-      ),
-      onPressed: busy ? null : onToggle,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isListening)
-            const Padding(
-              padding: EdgeInsets.only(right: 6),
-              child: Icon(Icons.circle, size: 10, color: Colors.white),
-            ),
-          Icon(isListening ? Icons.mic : Icons.mic_none_outlined),
-          const SizedBox(width: 8),
-          Text(
-            isListening ? 'Recording…  Tap to send' : 'Talk to Agent',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor:
+                isListening ? const Color(0xFF2E7D32) : const Color(0xFFFFCD11),
+            foregroundColor: isListening ? Colors.white : Colors.black,
           ),
-        ],
-      ),
+          onPressed: busy ? null : onToggle,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isListening)
+                const Padding(
+                  padding: EdgeInsets.only(right: 6),
+                  child:
+                      Icon(Icons.circle, size: 10, color: Colors.greenAccent),
+                ),
+              Icon(isListening ? Icons.mic : Icons.mic_none_outlined),
+              const SizedBox(width: 8),
+              Text(
+                isListening ? 'Listening…  Tap to mute' : 'Tap to Listen',
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+        if (isListening && partialTranscript.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+            child: Text(
+              partialTranscript,
+              style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -671,183 +700,6 @@ class _NoteSheetState extends State<_NoteSheet> {
   }
 }
 
-// ── Live report card ───────────────────────────────────────────────────────
-
-class _LiveReportCard extends StatefulWidget {
-  const _LiveReportCard({required this.report});
-  final LiveReport report;
-
-  @override
-  State<_LiveReportCard> createState() => _LiveReportCardState();
-}
-
-class _LiveReportCardState extends State<_LiveReportCard> {
-  bool _jsonExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final report = widget.report;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Live Report',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const Divider(height: 16),
-
-            if (report.findings.isEmpty)
-              const _EmptyHint(text: 'No findings yet.')
-            else
-              ...report.findings.reversed
-                  .take(5)
-                  .map((f) => _FindingTile(finding: f)),
-
-            if (report.media.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('Media',
-                  style: Theme.of(context).textTheme.labelMedium),
-              const SizedBox(height: 6),
-              ...report.media.reversed.map((m) => _MediaTile(item: m)),
-            ],
-
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () => setState(() => _jsonExpanded = !_jsonExpanded),
-              child: Row(
-                children: [
-                  Icon(
-                    _jsonExpanded
-                        ? Icons.expand_less
-                        : Icons.expand_more,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  const SizedBox(width: 4),
-                  Text('Debug JSON',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.outline)),
-                ],
-              ),
-            ),
-            if (_jsonExpanded)
-              Container(
-                margin: const EdgeInsets.only(top: 6),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  const JsonEncoder.withIndent('  ').convert(report.toJson()),
-                  style: const TextStyle(
-                      fontFamily: 'monospace', fontSize: 11),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Finding tile ───────────────────────────────────────────────────────────
-
-class _FindingTile extends StatelessWidget {
-  const _FindingTile({required this.finding});
-  final Finding finding;
-
-  static const _icons = {
-    FindingSeverity.ok: (Icons.check_circle_outline, Colors.green),
-    FindingSeverity.review: (Icons.warning_amber_outlined, Colors.orange),
-    FindingSeverity.critical: (Icons.error_outline, Colors.red),
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, color) = _icons[finding.severity]!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(finding.title,
-                    style: const TextStyle(fontWeight: FontWeight.w500)),
-                Text(finding.detail,
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Media tile ─────────────────────────────────────────────────────────────
-
-class _MediaTile extends StatelessWidget {
-  const _MediaTile({required this.item});
-  final MediaItem item;
-
-  static const _statusColors = {
-    MediaStatus.queued: Colors.grey,
-    MediaStatus.uploading: Colors.blue,
-    MediaStatus.processing: Colors.orange,
-    MediaStatus.complete: Colors.green,
-    MediaStatus.failed: Colors.red,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _statusColors[item.status] ?? Colors.grey;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Icon(
-            item.kind == MediaKind.photo
-                ? Icons.image_outlined
-                : item.kind == MediaKind.video
-                    ? Icons.videocam_outlined
-                    : Icons.mic_none_outlined,
-            size: 18,
-            color: Theme.of(context).colorScheme.secondary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(item.label,
-                  style: Theme.of(context).textTheme.bodySmall)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              item.status.name,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Error banner ──────────────────────────────────────────────────────────
 
 class _ErrorBanner extends StatelessWidget {
@@ -956,19 +808,3 @@ class _RequestedActionBanner extends StatelessWidget {
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.outline)),
-    );
-  }
-}

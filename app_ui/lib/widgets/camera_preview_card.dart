@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import '../core/live_camera_handle.dart';
 
 /// Live video feed panel using the device camera.
 ///
@@ -11,6 +12,7 @@ class CameraPreviewCard extends StatefulWidget {
     super.key,
     required this.isActive,
     required this.onSnapPhoto,
+    this.cameraHandle,
   });
 
   /// Driven by AppState.isVideoActive — caller controls this.
@@ -18,6 +20,9 @@ class CameraPreviewCard extends StatefulWidget {
 
   /// Called when the inspector taps "Snap Photo" inside the feed.
   final VoidCallback onSnapPhoto;
+
+  /// Optional handle so [AppState] can programmatically capture frames.
+  final LiveCameraHandle? cameraHandle;
 
   @override
   State<CameraPreviewCard> createState() => _CameraPreviewCardState();
@@ -48,11 +53,10 @@ class _CameraPreviewCardState extends State<CameraPreviewCard>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Release camera when app goes to background, re-init on resume.
-    if (_controller == null) return;
+    if (!widget.isActive) return;
     if (state == AppLifecycleState.inactive) {
       _disposeCamera();
-    } else if (state == AppLifecycleState.resumed && widget.isActive) {
+    } else if (state == AppLifecycleState.resumed) {
       _initCamera();
     }
   }
@@ -65,7 +69,9 @@ class _CameraPreviewCardState extends State<CameraPreviewCard>
   }
 
   Future<void> _initCamera() async {
-    if (_initialising || (_controller?.value.isInitialized ?? false)) return;
+    if (_initialising) return;
+    if (_controller?.value.isInitialized ?? false) return;
+    _disposeCamera();
     _initialising = true;
     _error = null;
     setState(() {});
@@ -98,6 +104,7 @@ class _CameraPreviewCardState extends State<CameraPreviewCard>
       }
 
       _controller = controller;
+      widget.cameraHandle?.attach(controller);
       _initialising = false;
       setState(() {});
     } catch (e) {
@@ -108,8 +115,11 @@ class _CameraPreviewCardState extends State<CameraPreviewCard>
   }
 
   void _disposeCamera() {
-    _controller?.dispose();
-    _controller = null;
+    if (_controller != null) {
+      widget.cameraHandle?.detach();
+      _controller!.dispose();
+      _controller = null;
+    }
     _initialising = false;
   }
 

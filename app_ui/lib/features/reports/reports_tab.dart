@@ -157,48 +157,6 @@ class _ResultCard extends StatelessWidget {
   }
 }
 
-// ── Assistant response box ─────────────────────────────────────────────────
-
-class _AssistantResponseBox extends StatelessWidget {
-  const _AssistantResponseBox({required this.text, required this.busy});
-  final String text;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 80),
-      color: cs.secondaryContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.smart_toy_outlined, size: 20,
-              color: cs.onSecondaryContainer),
-          const SizedBox(width: 10),
-          Expanded(
-            child: busy
-                ? LinearProgressIndicator(
-                    color: const Color(0xFFFFCD11),
-                    backgroundColor: Colors.white24,
-                  )
-                : Text(
-                    text.isEmpty
-                        ? 'Ask about past inspections — e.g. "Show issues for WL-0472 last 30 days"'
-                        : text,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: cs.onSecondaryContainer
-                            .withValues(alpha: text.isEmpty ? 0.55 : 1.0)),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ── Chat history ───────────────────────────────────────────────────────────
 
 class _ChatBubble extends StatelessWidget {

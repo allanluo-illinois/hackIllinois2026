@@ -16,6 +16,7 @@ import 'package:file_selector_macos/file_selector_macos.dart' as file_selector_m
 import 'package:image_picker_macos/image_picker_macos.dart' as image_picker_macos;
 import 'package:file_selector_windows/file_selector_windows.dart' as file_selector_windows;
 import 'package:image_picker_windows/image_picker_windows.dart' as image_picker_windows;
+import 'package:speech_to_text_windows/speech_to_text_windows.dart' as speech_to_text_windows;
 
 @pragma('vm:entry-point')
 class _PluginRegistrant {
@@ -113,6 +114,15 @@ class _PluginRegistrant {
       } catch (err) {
         print(
           '`image_picker_windows` threw an error: $err. '
+          'The app may not function as expected until you remove this plugin from pubspec.yaml'
+        );
+      }
+
+      try {
+        speech_to_text_windows.SpeechToTextWindows.registerWith();
+      } catch (err) {
+        print(
+          '`speech_to_text_windows` threw an error: $err. '
           'The app may not function as expected until you remove this plugin from pubspec.yaml'
         );
       }

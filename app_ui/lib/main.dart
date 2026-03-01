@@ -4,7 +4,9 @@ import 'app_shell.dart';
 import 'core/app_state.dart';
 import 'core/audio_capture.dart';
 import 'core/http_backend.dart';
+import 'core/live_camera_handle.dart';
 import 'core/media_service.dart';
+import 'core/stt_service.dart';
 import 'core/tts_service.dart';
 
 // CAT brand colours
@@ -24,6 +26,8 @@ void main() {
   final recorder = AvFoundationRecorder();
   final mediaService = MediaService(); // useGalleryFallback: true for simulator
   final ttsService = TtsService();
+  final cameraHandle = LiveCameraHandle();
+  final sttService = SttService();
 
   runApp(
     ChangeNotifierProvider(
@@ -32,6 +36,8 @@ void main() {
         recorder: recorder,
         mediaService: mediaService,
         tts: ttsService,
+        cameraHandle: cameraHandle,
+        stt: sttService,
         backendUrl: _defaultBackendUrl,
       ),
       child: const CatInspectorApp(),

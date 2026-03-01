@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'core/app_state.dart';
 import 'features/inspect/inspect_tab.dart';
 import 'features/reports/reports_tab.dart';
 
@@ -9,8 +11,30 @@ class AppShell extends StatefulWidget {
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
+class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      final appState = context.read<AppState>();
+      if (appState.liveReport != null) {
+        appState.endSession();
+      }
+    }
+  }
 
   static const List<Widget> _tabs = [
     InspectTab(),

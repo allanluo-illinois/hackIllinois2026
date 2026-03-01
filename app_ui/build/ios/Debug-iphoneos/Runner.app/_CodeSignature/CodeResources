@@ -46,7 +46,7 @@
 		</data>
 		<key>Frameworks/App.framework/App</key>
 		<data>
-		fydde7CKqNtO++N95DiuOo8rsDo=
+		Bq1QP7ikGw62qp3M1dj8q5Qt5lA=
 		</data>
 		<key>Frameworks/App.framework/Info.plist</key>
 		<data>
@@ -54,7 +54,7 @@
 		</data>
 		<key>Frameworks/App.framework/_CodeSignature/CodeResources</key>
 		<data>
-		FzPvUP9KKLCvXpv23D/ihlkdfaA=
+		2O/X0BYgCQ+CXjpCIMjKv06vRss=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
 		<data>
@@ -66,7 +66,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/NOTICES.Z</key>
 		<data>
-		WSBSMrKvur0cqr1y7mQlQ0CFdWk=
+		dRpZhebOVbmZN1jdXQ4M8pNPnbk=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/NativeAssetsManifest.json</key>
 		<data>
@@ -90,7 +90,7 @@
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/kernel_blob.bin</key>
 		<data>
-		9waJficCDIpyMfMmfqGIAm9eSR0=
+		59Zzv/1eFnj2jopMEvhLhLiSDeA=
 		</data>
 		<key>Frameworks/App.framework/flutter_assets/shaders/ink_sparkle.frag</key>
 		<data>
@@ -103,6 +103,30 @@
 		<key>Frameworks/App.framework/flutter_assets/vm_snapshot_data</key>
 		<data>
 		PLk09h0l/XVt/bVElKkgNzt9Djw=
+		</data>
+		<key>Frameworks/CwlCatchException.framework/CwlCatchException</key>
+		<data>
+		Nn5XnNWevc7Zs7saJy44uTS6wRs=
+		</data>
+		<key>Frameworks/CwlCatchException.framework/Info.plist</key>
+		<data>
+		iudah+3lhXQUKXTaPMD+3c+98+M=
+		</data>
+		<key>Frameworks/CwlCatchException.framework/_CodeSignature/CodeResources</key>
+		<data>
+		MiI5UApVRoN3a/EYnvpjSYunWl8=
+		</data>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/CwlCatchExceptionSupport</key>
+		<data>
+		OtLBbAdslCxf0qaZk6SID5NEbQo=
+		</data>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/Info.plist</key>
+		<data>
+		YD7aPfVeKyW/jQwDFEk9ls9or0M=
+		</data>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/_CodeSignature/CodeResources</key>
+		<data>
+		O+Azf7Z41FI/vTog8uzMbcZQufE=
 		</data>
 		<key>Frameworks/Flutter.framework/Flutter</key>
 		<data>
@@ -214,7 +238,7 @@
 		</data>
 		<key>Frameworks/camera_avfoundation.framework/camera_avfoundation</key>
 		<data>
-		RjqhW7NrPqADWI9rh05UJ736qFg=
+		BZWexDrJlsHQtYwxRoobH8V+Yxo=
 		</data>
 		<key>Frameworks/camera_avfoundation.framework/camera_avfoundation_privacy.bundle/Info.plist</key>
 		<data>
@@ -234,7 +258,7 @@
 		</data>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios</key>
 		<data>
-		rshg4Dh7ZW/qaCFEDnoRUwAwzvE=
+		XvBVWwkfZpI6J1wd8puJScxUvfY=
 		</data>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios_privacy.bundle/Info.plist</key>
 		<data>
@@ -244,9 +268,21 @@
 		<data>
 		/LX0ZlwxwIAIhjZaDB8EiH5KpXA=
 		</data>
+		<key>Frameworks/speech_to_text.framework/Info.plist</key>
+		<data>
+		Ku1te9oofsFTZYHqs0XjhAbHrNQ=
+		</data>
+		<key>Frameworks/speech_to_text.framework/_CodeSignature/CodeResources</key>
+		<data>
+		YVAO68Oo9G0wFqWyltlFS4z21H8=
+		</data>
+		<key>Frameworks/speech_to_text.framework/speech_to_text</key>
+		<data>
+		JdlXBdXg3VZJGyN4eRknDBoR0fg=
+		</data>
 		<key>Info.plist</key>
 		<data>
-		5Tw+4AHmwTXTu1R074FcdcGBW+g=
+		7Zl8VfT9hHsT/aXt+fVyRU2r9wM=
 		</data>
 		<key>PkgInfo</key>
 		<data>
@@ -254,11 +290,11 @@
 		</data>
 		<key>Runner.debug.dylib</key>
 		<data>
-		GOHy0HSndUbmmbBzgBf4K1x197A=
+		SaClG4LVrTRfXXoRNbPnWgKLAck=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		7f5yyuHuBgun0Lctn9zHzWjujrU=
+		hDkm2xfMgZS8HhNg7uWaivFBjEw=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -341,7 +377,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			+OHvrD1OOw+vnEuSoZVxRr3/jOYX312Dr7vFtlpetsQ=
+			dFOGIiZgu5mRQlJTVvJ2eHpI0anwxpYrfOkoozj6pCE=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/Info.plist</key>
@@ -355,7 +391,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			FnAyzeR5qb57r0liNl9ikI0b0zRN8j6WBzfdbbJWk48=
+			8wGPNhNERcqNRNqg7ngfHOBDDL6AUgz7gUjA1SXgttA=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/AssetManifest.bin</key>
@@ -376,7 +412,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Dt1Rh1gUZ00zIToy0dRymvRpDWPqmgV5NaJc+MOBuw8=
+			vaoQP2gx8Fnqc71fFP4WE80g/zUZpJZ6Q8VEfdPvXxk=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/NativeAssetsManifest.json</key>
@@ -418,7 +454,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			kOA1b1ZiXrnaMJa+6v3Wy8oX+qcptGM+YAR1gIL5Z+I=
+			77qC3W/k3LAk8E0CYYWQmRaqYnYVmRleNXnNZInBJhc=
 			</data>
 		</dict>
 		<key>Frameworks/App.framework/flutter_assets/shaders/ink_sparkle.frag</key>
@@ -440,6 +476,48 @@
 			<key>hash2</key>
 			<data>
 			voayeld2cKO/xTgKH/PG6QD4xzLD9m37V4iUvNPMgww=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchException.framework/CwlCatchException</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			6GyVHl3JXE6hNzPJqzoKqRzEEj88u8AfSKf0rnfDy1U=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchException.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			jb1PVSPSMDAG00InLpd9GNU5etyG9MnQAIagL+/FPMo=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchException.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			7OWBLLQqOzk6xz1X1EEqer084L+DKyPUWeQ6tTrfsYw=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/CwlCatchExceptionSupport</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			jIPcgJ3QopGXWoFg4wwvNHwYV03Dv/RYc8cUlbtajoA=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			SDXu30EEkwy1Zh8xQikLGgr3HOQq7G6AXVz6/5CsBBE=
+			</data>
+		</dict>
+		<key>Frameworks/CwlCatchExceptionSupport.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			XgTH/BuhYTpGtmbVrkjLWlitx9vng2j2/93nfVKE5wI=
 			</data>
 		</dict>
 		<key>Frameworks/Flutter.framework/Flutter</key>
@@ -635,7 +713,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			wXlQ0lADZiTcbuAsHdoBo1c0iJB1as3ZMFnxtQRUd1c=
+			HG0NmALQt/SHRt3J2LggUYJYUg9rwoHQv3PE3Oq2DfY=
 			</data>
 		</dict>
 		<key>Frameworks/camera_avfoundation.framework/camera_avfoundation_privacy.bundle/Info.plist</key>
@@ -670,7 +748,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			b+3Jh6VdbGR6jCKRMcew/0mhT6oQH3Qy/77b4SXnk4s=
+			A97eiU+Ff5qRMwrXPY8/cISFKNkwk/Pzdp4hZglSSms=
 			</data>
 		</dict>
 		<key>Frameworks/image_picker_ios.framework/image_picker_ios_privacy.bundle/Info.plist</key>
@@ -687,18 +765,39 @@
 			bS2g2NkwIn1CjB2TY7CtbjoS4sm2jFzilxWKdBL8jDE=
 			</data>
 		</dict>
+		<key>Frameworks/speech_to_text.framework/Info.plist</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			KlAWT26KvE2EQ342/tMyfEXAudriurq0/CNZLp5dxG4=
+			</data>
+		</dict>
+		<key>Frameworks/speech_to_text.framework/_CodeSignature/CodeResources</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			IU+USGG9KstGjAD/pUz5jAdfEgsQlasd060oDohxsfw=
+			</data>
+		</dict>
+		<key>Frameworks/speech_to_text.framework/speech_to_text</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			5fD2IuBY+HXZLw5LitmkpzbYKu7IU78LymayQVBcn7Q=
+			</data>
+		</dict>
 		<key>Runner.debug.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			IVvFx9Yjjyx36KVNoTC/PnSRVtnbJaPKCFXgsMmVCY8=
+			NBfBRW+VvqjOJwkpVQuuffjQ3cDH+4xJhUvHM6fUuq8=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			fG6HdLKQFKcbHKtPcdPzMd9nYSv4ZOaHVXwfJ4xx9js=
+			wnfP2FZolnkZD3d7XMbtQnQ4HrhKWTsP3qwDe9HIn30=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>
