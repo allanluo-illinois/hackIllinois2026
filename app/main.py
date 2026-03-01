@@ -16,7 +16,7 @@ import re
 import base64
 import asyncio
 import shutil
-
+import torch
 import numpy as np
 import uvicorn
 from fastapi import FastAPI, Request, File, UploadFile, WebSocket, WebSocketDisconnect
