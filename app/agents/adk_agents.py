@@ -1,7 +1,7 @@
 import datetime
 from google.adk.agents import Agent
 
-from tools.adk_tools import save_report_tool, fetch_history_tool, update_report_tool
+from tools.adk_tools import submit_final_completed_inspection_tool, fetch_history_tool, update_report_tool
 from tools.vision_tools import locate_zone
 
 # 1. EXHAUSTIVE KEY LISTS (Matching generator.py exactly)
@@ -88,11 +88,11 @@ generator_agent = Agent(
         - The 'primary_status' value MUST be explicitly formatted as exactly 'GREEN', 'YELLOW', or 'RED'.
 
         TOOL EXECUTION RULES (CRITICAL):
-        - NEVER call `submit_final_completed_inspection` to "save progress". 
-        - DO NOT call `submit_final_completed_inspection` until the technician indicates they are "Finished" or "Done" AND you have verified that all required fields are filled.
+        - NEVER call `submit_final_completed_inspection_tool` to "save progress". 
+        - DO NOT call `submit_final_completed_inspection_tool` until the technician indicates they are "Finished" or "Done" AND you have verified that all required fields are filled.
         
         ERROR HANDLING (CRITICAL):
-        - If the 'submit_final_completed_inspection' tool returns an error (success: false), you MUST read the exact error message.
+        - If the 'submit_final_completed_inspection_tool' tool returns an error (success: false), you MUST read the exact error message.
         - If the error is about your JSON structure (e.g., 'primary_status' is missing from the root level), silently fix your payload format and call the tool again immediately.
         - If the error states that you need to ask the technician for missing information, DO NOT retry the tool. Apologize to the technician, ask them for the specific missing information, wait for their reply, and THEN call the tool again.
         SCHEMA TEMPLATE:
