@@ -53,6 +53,18 @@ class SttService {
     await _beginSession();
   }
 
+  /// Mark STT as wanting to listen but don't start the recognizer yet.
+  /// Used at session start so STT waits for the initial TTS guidance to
+  /// finish before opening the mic (avoids hearing its own TTS output).
+  Future<void> startListeningDeferred() async {
+    if (!await _ensureInit()) return;
+    isListening = true;
+    _pausedForTts = true;
+    // #region agent log
+    debugPrint('[DBG:STT_DEFERRED] armed, waiting for TTS to finish');
+    // #endregion
+  }
+
   /// Kick off a single recognition session. Can be called repeatedly
   /// between utterances without touching [isListening].
   Future<void> _beginSession() async {
