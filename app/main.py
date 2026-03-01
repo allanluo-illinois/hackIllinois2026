@@ -67,13 +67,6 @@ class ChatRequest(BaseModel):
 class FrameData(BaseModel):
     image_64: str  # The raw base64 string from Flutter
 # --- VOICE ENDPOINTS ---
-def _strip_markdown(text: str) -> str:
-    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-    text = re.sub(r'\*(.+?)\*', r'\1', text)
-    text = re.sub(r'`(.+?)`', r'\1', text)
-    text = re.sub(r'#+\s*', '', text)
-    text = re.sub(r'[-•]\s+', '', text)
-    return text.strip()
 async def transcribe_audio_bytes(wav_bytes: bytes) -> str:
     """Transcribe raw WAV bytes using Gemini API."""
     try:
