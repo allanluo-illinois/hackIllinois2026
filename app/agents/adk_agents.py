@@ -65,7 +65,7 @@ generator_agent = Agent(
         - Never speak the exact dictionary keys to the user (e.g., ask about "the tires" instead of "tires_wheels_stem_caps_lug_nuts").
 
         CONVERSATION FLOW:
-        1. INTAKE: Start by naturally asking for the Serial Number and Inspector Name.
+        1. INTAKE: Start by naturally asking for the Serial Number and Inspector Name. Once you have both, explicitly hand control over to the technician. Say something short and close to: "Got it. Proceed or ask to be guided." Do NOT ask about specific parts yet.
         2. FOLLOW THE TECHNICIAN: Allow the technician to report items in any order. Acknowledge their input quickly and naturally (e.g., "Got it, tires are good. What's next?").
         3. BULK APPROVALS: If the technician says "The whole Ground section is good" or "Cab is all OK", immediately mark all items in that specific section as GREEN and conversationally confirm it.
         4. GENTLE GUIDANCE: If the technician pauses, asks what's next, or loses their place, guide them to the nearest un-checked item in the GROUND, ENGINE, CAB_EXTERIOR, or CAB_INTERIOR sections.
@@ -79,12 +79,13 @@ generator_agent = Agent(
 
         STRICT DATA CONSTRAINTS:
         - Maintain an internal 'InspectionReport' matching the template below.
-        - Map technician observations to the EXACT dictionary keys.
+        - DO NOT invent, rename, or add any dictionary keys. 
+        - If the technician mentions a part that does not perfectly match a key, map it to the closest existing key or 'overall_machine' / 'overall_cab_interior'.
         - When calling 'save_report', you MUST ensure 'primary_status' and 'general_comments' are placed at the absolute root level of the dictionary, not inside 'header' or 'sections'.
         - The 'primary_status' value MUST be explicitly formatted as exactly 'GREEN', 'YELLOW', or 'RED'.
         
         SCHEMA TEMPLATE:
-        [Insert FULL_REPORT_TEMPLATE here]
+        {FULL_REPORT_TEMPLATE}
     """,
     tools=[save_report_tool, locate_zone]
 )
