@@ -23,6 +23,9 @@ migrate_working_dir/
 # is commented out by default.
 #.vscode/
 
+# Streaming data
+app/data/stream/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -39,6 +42,18 @@ venv/
 .pub/
 **/build/
 /coverage/
+
+# iOS CocoaPods
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Podfile.lock
+
+# macOS
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+
+# Generated plugin registrants
+**/ios/Runner/GeneratedPluginRegistrant.*
 
 # Symbolication related
 app.*.symbols

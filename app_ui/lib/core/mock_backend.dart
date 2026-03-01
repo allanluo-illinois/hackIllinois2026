@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
+
 import 'backend_port.dart';
 import 'models.dart';
 
@@ -238,6 +240,14 @@ class MockBackend implements BackendPort {
       assistantText:
           'Report $reportId updated: "$instruction". Changes saved successfully.',
     );
+  }
+
+  // ── PDF download ────────────────────────────────────────────────────────
+
+  @override
+  Future<Uint8List> downloadReportPdf({required Map<String, dynamic> payload}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return Uint8List(0);
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────────

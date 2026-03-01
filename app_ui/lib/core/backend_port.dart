@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'models.dart';
 
 /// Swap this for HttpBackend, etc. without touching UI/state.
@@ -46,6 +48,10 @@ abstract class BackendPort {
     required String reportId,
     required String instruction,
   });
+
+  /// Generate a PDF for an inspection. [payload] is the full inspection data
+  /// matching the backend's /load-inspection schema (machine, sections, etc.).
+  Future<Uint8List> downloadReportPdf({required Map<String, dynamic> payload});
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
 
