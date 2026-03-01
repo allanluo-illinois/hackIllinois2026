@@ -2,3 +2,12 @@ google-adk
 firebase-admin
 python-dotenv
 google-genai
+fastapi
+uvicorn
+reportlab
+torch
+numpy
+torchaudio
+soundfile
+scipy
+silero-vad

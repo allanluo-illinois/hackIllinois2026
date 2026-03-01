@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'audio_capture.dart';
+import 'pdf_report_builder.dart';
 import 'backend_port.dart';
 import 'http_backend.dart';
 import 'live_camera_handle.dart';
@@ -444,7 +445,22 @@ class AppState extends ChangeNotifier {
   /// the share sheet. [payload] is the full inspection data map matching the
   /// backend's /load-inspection schema. Returns the local file path.
   Future<String> downloadReportPdf(Map<String, dynamic> payload) async {
-    final bytes = await backend.downloadReportPdf(payload: payload);
+    // Generate PDF locally on-device (no backend required).
+    final reportData = PdfReportBuilder.sampleReportData;
+    // Overlay any caller-supplied header fields.
+    if (payload['machine'] != null) {
+      (reportData['header'] as Map<String, dynamic>)['serial_number'] =
+          payload['machine']['serial_number'];
+    }
+    if (payload['date_generated'] != null) {
+      (reportData['header'] as Map<String, dynamic>)['date'] =
+          payload['date_generated'];
+    }
+    if (payload['general_comments'] != null) {
+      reportData['general_comments'] = payload['general_comments'];
+    }
+
+    final bytes = await PdfReportBuilder.buildReport(reportData);
     final dir = await getTemporaryDirectory();
     final serial = payload['machine']?['serial_number'] ?? 'report';
     final file = File('${dir.path}/inspection_$serial.pdf');
