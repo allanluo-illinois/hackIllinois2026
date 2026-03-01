@@ -28,6 +28,9 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from google import genai
 from app.agents.adk_agents import generator_agent, reviewer_agent
+from app.tools.pdf_generator import generate_inspection_pdf, get_sample_inspection_report
+from fastapi.responses import StreamingResponse
+import json
 import shutil
 
 load_dotenv()
@@ -335,6 +338,56 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("🔌 Voice Client disconnected.")
+
+# ── PDF GENERATION ENDPOINT ──────────────────────────────────────────────────
+
+@app.post("/load-inspection")
+async def load_inspection(payload: dict):
+    """
+    Generate a PDF report from inspection data.
+
+    If payload is empty or contains no 'machine' data, returns a sample report.
+    Otherwise, generates a PDF from the provided inspection data.
+    """
+    try:
+        # If no meaningful data provided, use sample
+        if not payload or not payload.get("machine"):
+            report_data = get_sample_inspection_report()
+        else:
+            # Use provided data or merge with sample template
+            report_data = payload
+
+        # Generate PDF
+        pdf_bytes = generate_inspection_pdf(report_data)
+
+        # Return as downloadable file
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=inspection_report.pdf"}
+        )
+    except Exception as e:
+        print(f"❌ PDF generation error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/sample-report")
+async def sample_report():
+    """
+    Download a sample inspection report PDF for demonstration.
+    """
+    try:
+        report_data = get_sample_inspection_report()
+        pdf_bytes = generate_inspection_pdf(report_data)
+
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=sample_inspection_report.pdf"}
+        )
+    except Exception as e:
+        print(f"❌ Sample report error: {e}")
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     # Start the server using Uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

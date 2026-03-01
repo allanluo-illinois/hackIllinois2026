@@ -49,6 +49,11 @@ abstract class BackendPort {
     required String instruction,
   });
 
+  // ── Download ───────────────────────────────────────────────────────────
+
+  /// Download an inspection report as raw bytes.
+  Future<Uint8List> downloadReport({required Map<String, dynamic> payload});
+
   /// Generate a PDF for an inspection. [payload] is the full inspection data
   /// matching the backend's /load-inspection schema (machine, sections, etc.).
   Future<Uint8List> downloadReportPdf({required Map<String, dynamic> payload});

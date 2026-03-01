@@ -216,6 +216,21 @@ class HttpBackend implements BackendPort {
     );
   }
 
+  // ── Download ─────────────────────────────────────────────────────────
+
+  @override
+  Future<Uint8List> downloadReport({required Map<String, dynamic> payload}) async {
+    final resp = await _client
+        .post(
+          _uri('/load-inspection'),
+          headers: _jsonHeaders,
+          body: jsonEncode(payload),
+        )
+        .timeout(timeout);
+    _checkStatus(resp);
+    return resp.bodyBytes;
+  }
+
   // ── PDF download ─────────────────────────────────────────────────────
 
   @override

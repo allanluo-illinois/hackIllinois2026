@@ -1,6 +1,8 @@
-from firebase_admin import firestore
+from firebase_admin import firestore, storage
 import datetime
 import copy
+import os
+import time
 
 #Template
 GROUND_KEYS = [
@@ -72,7 +74,7 @@ def enforce_schema(payload: dict, template: dict) -> dict:
                 
     return clean_data
 
-def save_inspection_report(db, report_data: dict) -> dict:
+def save_inspection_report(db, report_data: dict, photo_links: dict) -> dict:
     """Saves a schema-validated report to Firestore."""
     try:
         # 1. Get a pristine template with a current timestamp
@@ -92,6 +94,8 @@ def save_inspection_report(db, report_data: dict) -> dict:
         # 4. Save the guaranteed-clean data to Firestore
         doc_ref = db.collection('inspection_reports').document()
         doc_ref.set(clean_report)
+        if photo_links:
+            db.collection('report_photos').document(doc_ref.id).set(photo_links)
         return {"success": True, "report_id": doc_ref.id}
         
     except Exception as e:
@@ -149,3 +153,26 @@ def update_inspection_in_db(db, serial_number: str, timestamp: str, updates: dic
             "status": "error", 
             "message": f"Database error: {str(e)}"
         }
+    
+def upload_defect_photo_to_storage(serial_number: str, component_name: str) -> dict:
+    """Grabs the latest photo from data/stream and uploads to Firebase Storage."""
+    current_dir = os.path.dirname(os.path.abspath(__file__)) 
+    stream_dir = os.path.abspath(os.path.join(current_dir, "..", "data","stream")) 
+    
+    # Point directly to the exact file Flutter saves
+    source_path = os.path.join(stream_dir, "current_frame.jpg")  
+    
+    if not os.path.exists(source_path):
+        return {"success": False, "error": "No camera frame available right now."}
+    try:
+        bucket = storage.bucket()
+        blob_name = f"inspections/{serial_number}/{int(time.time())}_{component_name}.jpg"
+        blob = bucket.blob(blob_name)
+        blob.upload_from_filename(source_path)
+        # os.remove(source_path)
+        
+        # Make it public and return the exact URL
+        blob.make_public()
+        return {"success": True, "url": blob.public_url}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

@@ -15,6 +15,15 @@ class _ReportsTabState extends State<ReportsTab> {
   final _scrollCtrl = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    final state = context.read<AppState>();
+    if (state.availableReports.isEmpty) {
+      state.loadAvailableReports();
+    }
+  }
+
+  @override
   void dispose() {
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
@@ -44,9 +53,9 @@ class _ReportsTabState extends State<ReportsTab> {
       appBar: AppBar(title: const Text('Reports')),
       body: Column(
         children: [
-          // ── 1. Query Results ─────────────────────────────────────────────
-          if (state.reportsQueryResults.isNotEmpty)
-            _QueryResultsRow(results: state.reportsQueryResults),
+          // ── 1. Available Reports (always visible) ────────────────────────
+          if (state.availableReports.isNotEmpty)
+            _AvailableReportsSection(reports: state.availableReports),
 
           // ── 2. Chat history ──────────────────────────────────────────────
           Expanded(
@@ -74,45 +83,36 @@ class _ReportsTabState extends State<ReportsTab> {
   }
 }
 
-// ── Query results horizontal scroll ───────────────────────────────────────
+// ── Available reports (always visible) ─────────────────────────────────────
 
-class _QueryResultsRow extends StatelessWidget {
-  const _QueryResultsRow({required this.results});
-  final List<ReportSummary> results;
+class _AvailableReportsSection extends StatelessWidget {
+  const _AvailableReportsSection({required this.reports});
+  final List<ReportSummary> reports;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 148,
-      child: results.isEmpty
-          ? Center(
-              child: Text(
-                'Search results will appear here.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.outline),
-              ),
-            )
-          : ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              itemCount: results.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (_, i) => _ResultCard(summary: results[i]),
-            ),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        itemCount: reports.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) => _ReportCard(summary: reports[i]),
+      ),
     );
   }
 }
 
-class _ResultCard extends StatefulWidget {
-  const _ResultCard({required this.summary});
+class _ReportCard extends StatefulWidget {
+  const _ReportCard({required this.summary});
   final ReportSummary summary;
 
   @override
-  State<_ResultCard> createState() => _ResultCardState();
+  State<_ReportCard> createState() => _ReportCardState();
 }
 
-class _ResultCardState extends State<_ResultCard> {
+class _ReportCardState extends State<_ReportCard> {
   bool _downloading = false;
 
   Future<void> _downloadPdf() async {
@@ -173,50 +173,54 @@ class _ResultCardState extends State<_ResultCard> {
       width: 220,
       child: Card(
         margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.description_outlined, size: 16),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      summary.reportId,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: _downloadPdf,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.picture_as_pdf, size: 18, color: Colors.red),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        summary.reportId,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  if (_downloading)
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  else
-                    GestureDetector(
-                      onTap: _downloadPdf,
-                      child: const Icon(Icons.download, size: 18),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(summary.machineId,
-                  style: Theme.of(context).textTheme.labelSmall),
-              Text(dateStr,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.outline)),
-              const Spacer(),
-              Text(
-                summary.summaryLine,
-                style: Theme.of(context).textTheme.bodySmall,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                    if (_downloading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _downloadPdf,
+                        child: const Icon(Icons.download, size: 18),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(summary.machineId,
+                    style: Theme.of(context).textTheme.labelSmall),
+                Text(dateStr,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline)),
+                const Spacer(),
+                Text(
+                  summary.summaryLine,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),
