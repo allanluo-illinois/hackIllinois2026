@@ -1,7 +1,0 @@
-${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh
-${BUILT_PRODUCTS_DIR}/CwlCatchException/CwlCatchException.framework
-${BUILT_PRODUCTS_DIR}/CwlCatchExceptionSupport/CwlCatchExceptionSupport.framework
-${BUILT_PRODUCTS_DIR}/camera_avfoundation/camera_avfoundation.framework
-${BUILT_PRODUCTS_DIR}/image_picker_ios/image_picker_ios.framework
-${BUILT_PRODUCTS_DIR}/share_plus/share_plus.framework
-${BUILT_PRODUCTS_DIR}/speech_to_text/speech_to_text.framework

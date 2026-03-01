@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
+
 import 'backend_port.dart';
 import 'models.dart';
 
@@ -248,6 +250,14 @@ class MockBackend implements BackendPort {
   Future<Uint8List> downloadReport({required Map<String, dynamic> payload}) async {
     await Future.delayed(const Duration(milliseconds: 300));
     return Uint8List.fromList(utf8.encode(jsonEncode(payload)));
+  }
+
+  // ── PDF download ────────────────────────────────────────────────────────
+
+  @override
+  Future<Uint8List> downloadReportPdf({required Map<String, dynamic> payload}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    return Uint8List(0);
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────────

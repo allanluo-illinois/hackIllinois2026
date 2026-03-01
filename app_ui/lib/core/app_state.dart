@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -111,6 +112,7 @@ class AppState extends ChangeNotifier {
       latestAgentRole = AgentRole.orchestrator;
       pendingAction = RequestedAction.none;
       isVideoActive = true;
+      _startPeriodicFrameUpload();
 
       tts.speak(latestAgentText);
 
@@ -310,7 +312,22 @@ class AppState extends ChangeNotifier {
   void toggleVideo() {
     isVideoActive = !isVideoActive;
     debugPrint('📹 Camera preview ${isVideoActive ? "ON" : "OFF"}');
+    if (isVideoActive && liveReport != null) {
+      _startPeriodicFrameUpload();
+    } else {
+      cameraHandle.stopPeriodicCapture();
+    }
     notifyListeners();
+  }
+
+  /// Kick off periodic frame capture → upload so the backend always has a
+  /// recent `current_frame.jpg` for vision analysis.
+  void _startPeriodicFrameUpload() {
+    final b = backend;
+    if (b is! HttpBackend) return;
+    cameraHandle.startPeriodicCapture(
+      onFrame: (path) => b.uploadFrame(path),
+    );
   }
 
   // ── Media capture & upload ────────────────────────────────────────────
@@ -396,6 +413,7 @@ class AppState extends ChangeNotifier {
   void endSession() {
     tts.stop();
     stt.stopListening();
+    cameraHandle.stopPeriodicCapture();
 
     final sessionId = liveReport?.sessionId;
     liveReport = null;
@@ -418,6 +436,21 @@ class AppState extends ChangeNotifier {
     if (sessionId != null) {
       backend.endSession(sessionId);
     }
+  }
+
+  // ── PDF download ─────────────────────────────────────────────────────
+
+  /// Generate a PDF from inspection data, save to temp directory, and open
+  /// the share sheet. [payload] is the full inspection data map matching the
+  /// backend's /load-inspection schema. Returns the local file path.
+  Future<String> downloadReportPdf(Map<String, dynamic> payload) async {
+    final bytes = await backend.downloadReportPdf(payload: payload);
+    final dir = await getTemporaryDirectory();
+    final serial = payload['machine']?['serial_number'] ?? 'report';
+    final file = File('${dir.path}/inspection_$serial.pdf');
+    await file.writeAsBytes(bytes);
+    await Share.shareXFiles([XFile(file.path)]);
+    return file.path;
   }
 
   // ── Reports state ──────────────────────────────────────────────────────

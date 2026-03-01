@@ -32,11 +32,11 @@ class HttpBackend implements BackendPort {
         'Accept': 'application/json',
       };
 
-  /// Best-effort upload of an image frame to the data_stream server (port 8001)
-  /// so the vision tool can read it from disk.
-  Future<bool> _uploadFrame(String filePath) async {
+  /// Best-effort upload of an image frame to the backend server so the
+  /// vision tool can read it from disk at `data/stream/current_frame.jpg`.
+  Future<bool> uploadFrame(String filePath) async {
     try {
-      final uploadBase = baseUrl.replaceAll(RegExp(r':\d+$'), ':8001');
+      final uploadBase = baseUrl.replaceAll(RegExp(r':\d+$'), ':8000');
       final request = http.MultipartRequest(
           'POST', Uri.parse('$uploadBase/upload-frame'));
       request.files.add(await http.MultipartFile.fromPath('file', filePath));
@@ -100,7 +100,7 @@ class HttpBackend implements BackendPort {
     String messageText = text ?? '';
 
     if (imageFilePath != null) {
-      final uploaded = await _uploadFrame(imageFilePath);
+      final uploaded = await uploadFrame(imageFilePath);
       if (messageText.isEmpty) {
         messageText = uploaded
             ? 'I just took a photo at zone $zoneId. '
@@ -152,7 +152,7 @@ class HttpBackend implements BackendPort {
     String? zoneId,
   }) async {
     if (kind == MediaKind.photo) {
-      await _uploadFrame(filePath);
+      await uploadFrame(filePath);
     }
 
     return const MediaProcessResult(
@@ -220,6 +220,21 @@ class HttpBackend implements BackendPort {
 
   @override
   Future<Uint8List> downloadReport({required Map<String, dynamic> payload}) async {
+    final resp = await _client
+        .post(
+          _uri('/load-inspection'),
+          headers: _jsonHeaders,
+          body: jsonEncode(payload),
+        )
+        .timeout(timeout);
+    _checkStatus(resp);
+    return resp.bodyBytes;
+  }
+
+  // ── PDF download ─────────────────────────────────────────────────────
+
+  @override
+  Future<Uint8List> downloadReportPdf({required Map<String, dynamic> payload}) async {
     final resp = await _client
         .post(
           _uri('/load-inspection'),

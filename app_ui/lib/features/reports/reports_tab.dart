@@ -104,13 +104,67 @@ class _AvailableReportsSection extends StatelessWidget {
   }
 }
 
-class _ReportCard extends StatelessWidget {
+class _ReportCard extends StatefulWidget {
   const _ReportCard({required this.summary});
   final ReportSummary summary;
 
   @override
+  State<_ReportCard> createState() => _ReportCardState();
+}
+
+class _ReportCardState extends State<_ReportCard> {
+  bool _downloading = false;
+
+  Future<void> _downloadPdf() async {
+    setState(() => _downloading = true);
+    try {
+      final s = widget.summary;
+      final state = context.read<AppState>();
+      final report = state.liveReport;
+
+      // Build payload matching the backend /load-inspection schema.
+      final payload = <String, dynamic>{
+        'machine': {
+          'model': 'CAT 950',
+          'serial_number': s.machineId,
+        },
+        'date_generated':
+            '${s.date.year}-${s.date.month.toString().padLeft(2, '0')}-${s.date.day.toString().padLeft(2, '0')}',
+        'general_comments': s.summaryLine,
+        'sections': <String, dynamic>{},
+      };
+
+      // Populate sections from live report findings if available.
+      if (report != null && report.findings.isNotEmpty) {
+        final items = report.findings
+            .map((f) => {
+                  'component': f.title,
+                  'status': f.severity == FindingSeverity.ok
+                      ? 'PASS'
+                      : f.severity == FindingSeverity.review
+                          ? 'MONITOR'
+                          : 'FAIL',
+                  'comments': f.detail,
+                })
+            .toList();
+        payload['sections'] = {'Inspection_Findings': items};
+      }
+
+      await state.downloadReportPdf(payload);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final state = context.read<AppState>();
+    final summary = widget.summary;
     final dateStr =
         '${summary.date.year}-${summary.date.month.toString().padLeft(2, '0')}-'
         '${summary.date.day.toString().padLeft(2, '0')}';
@@ -121,14 +175,7 @@ class _ReportCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => state.downloadReport({
-            'machine': {
-              'model': summary.machineId,
-              'serial_number': summary.reportId,
-            },
-            'date_generated': dateStr,
-            'summary': summary.summaryLine,
-          }),
+          onTap: _downloadPdf,
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -146,6 +193,17 @@ class _ReportCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (_downloading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _downloadPdf,
+                        child: const Icon(Icons.download, size: 18),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
