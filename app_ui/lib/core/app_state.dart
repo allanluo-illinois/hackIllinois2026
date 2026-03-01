@@ -111,8 +111,9 @@ class AppState extends ChangeNotifier {
 
       tts.speak(latestAgentText);
 
-      // Begin continuous on-device STT so the operator can talk hands-free.
-      stt.startListening();
+      // Arm STT but don't start the mic yet — it will auto-start when
+      // the initial TTS guidance finishes (via _onTtsStateChanged → resumeAfterTts).
+      stt.startListeningDeferred();
     } catch (e) {
       debugPrint('Session start error: $e');
       lastError = 'Could not start session. Check server URL and try again.';
